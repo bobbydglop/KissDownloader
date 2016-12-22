@@ -9,18 +9,20 @@ try:
 except ImportError:
     import urllib2
 
+# Modified verison of https://github.com/BDrgon/KissDownloader all credit to origional author(s)
+# Run UpdateModuals.py for initial setup
+# Download list of kissanime series
+
 # TODO error management (download timeout)
 # TODO simultaneous downloads - KissDownloadManager.py WIP
 
-# CONFIG
 website = "kissanime.ru"
 user_name = ""
 user_password = ""
-destination = "" # Download Directory
+destination = ""
 episode_min = "0" # first episode to download
 quality = "1280x720.mp4"
 prefix = ""
-# END CONFIG
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
@@ -247,6 +249,7 @@ class KissDownloader:
 
     def download(self, p):
         episode_list = []
+        global prefix
 
         #p = [user, password, title, anime, season, episode_min, episode_max, destination, quality, site]
         # takes a list of parameters and uses them to download the show
@@ -279,21 +282,21 @@ class KissDownloader:
                 # video = [url, file_extension]
 
                 if prefix != "":
-                    prefix = p[4] + prefix
+                    prefix2 = p[4] + prefix
 
                 if video[0] != 'false':
                     if page[1]:  # if episode is called uncensored
                         if e % 1 == 0:
                             e = int(e)
-                            filename = prefix + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
+                            filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
                         else:
-                            filename = prefix + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
+                            filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
                     else:
                         if e % 1 == 0:
                             e = int(e)
-                            filename = prefix + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
+                            filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
                         else:
-                            filename = prefix + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
+                            filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
                     print("Resolved [" + filename + "]")
                     episode_list.append((video[0], filename, p[7]))
                 else: print("Retrieve failed [" + str(e) + "] trying alternative quality")
@@ -340,11 +343,6 @@ class KissDownloader:
                     newrow=[row[0],row[1],row[2],row[3],row[4],1]
                     
                     title = row[0]
-
-                    mapping = { ' ':'_', '-':'_', '`':'_', '@':'_', '#':'_', '$':'_', '%':'_', '^':'_', '&':'_', '*':'_', '(':'_', ')':'_', '[':'_', ']':'_', '\':'_', '|':'_', '+':'_', '=':'_', ':':'_', ';':'_', '~':'_', '___':'_', '__':'_', '__':'_'}
-                    for k, v in mapping.iteritems():
-                        title = title.replace(k, v) # lazy replace
-
                     url = row[1]
                     mal = row[2]
                     episode_max = row[3]
@@ -360,6 +358,10 @@ class KissDownloader:
         #writer.writerows([newrow]) # uncomment to include first row from new file
         
         newfile.close()
+
+        mapping = { ' ':'_', '-':'_', '`':'_', '@':'_', '#':'_', '$':'_', '%':'_', '^':'_', '&':'_', '*':'_', '(':'_', ')':'_', '[':'_', ']':'_', '|':'_', '+':'_', '=':'_', ':':'_', ';':'_', '~':'_', '___':'_', '__':'_'}
+        for k, v in mapping.items():
+            title = title.replace(k, v)
         
         return website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality
 
