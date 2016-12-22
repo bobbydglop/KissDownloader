@@ -1,30 +1,18 @@
 # KissDownloader
 Downloads shows from Kissanime.to, Kisscartoon.me, Kissasian.com
 
-4th November Update
-* now uses a hidden browser
-* increased speed of getting urls for videos
-
-
 **Installation**
+* Install Python 3 [Download Here](https://www.python.org/downloads/)
+* Run UpdateModuals.py
+* Install any missing python modules with `pip install {module}`.
+* Edit KissDownloader.py (under #CONFIG), define 'user_name', 'user_password', 'destination'.
 
-* Install Python [Download Here](https://www.python.org/downloads/) the latest one.
+**Changes**
+* Removed GUI
+* Improved error handling
+* Download a list of animes (resolved.csv)
 
-* Run UpdateModuals.py (may need to be run with admin/root privileges)
-
-Installation is now done, to use the script run KissDownloaderGUI.py
-
-
--python modules use are; Beautifulsoup, cfscrape, pySmartDL, pip
-note: these modules should auto install if you have pip installed which is installed by default on python 3.4 and up on windows
-
-
-The script should work all all platforms however i am only able to test on windows.
-
-Note: I don't have a Mac computer so I am unable to test further versions of the script
-Note: This works best with your default player set to flash, and auto play turned off
-
-For Mac users change the config file destination to look like 
-```
-destination = /Users/HomeUser/Desktop/
-```
+The following columns are required in list (resolved.csv):
+Column 1: anime title
+Column 2: kissanime url
+Column 4: episode count
