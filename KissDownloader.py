@@ -1,4 +1,4 @@
-import urllib, csv, re, shutil, cfscrape, pySmartDL, requests, sys, os, time, pip
+import urllib, csv, re, shutil, cfscrape, pySmartDL, requests, sys, os, time, pip, glob, shutil
 from pathlib import Path
 from bs4 import BeautifulSoup
 from tempfile import NamedTemporaryFile
@@ -10,19 +10,21 @@ except ImportError:
     import urllib2
 
 # Modified verison of https://github.com/BDrgon/KissDownloader all credit to origional author(s)
-# Run UpdateModuals.py for initial setup
-# Download list of kissanime series
 
-# TODO error management (download timeout)
 # TODO simultaneous downloads - KissDownloadManager.py WIP
+# TODO handling for episodes with multiple values e.g. 116-117
 
 website = "kissanime.ru"
-user_name = ""
-user_password = ""
-destination = ""
+user_name = "" # required
+user_password = "" # required
+destination = "" # required
+destinationx = destination # remove in next update
+download_limit = "40" # episode count to retrieve before download; recommended less than 50
+retrieve_last = "20" # rechecks if file exists, used because kissanime site is so unreliable
 episode_min = "0" # first episode to download
-quality = "1280x720.mp4"
-prefix = ""
+move_mp4 = "0" # set to 1 to move all *.mp4 files to up directory on download complete
+episode_current = "0" # do not change
+prefix = "" # not required
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
@@ -47,7 +49,7 @@ class KissDownloader:
             return status
             time.sleep(.5)
         
-        print("Logging in...  (5 second delay for browser check)")
+        print("Logging in...  (5 second cloudflare check)")
         
         # define login page
         login_url = "http://" + str(site) + "/Login"
@@ -185,57 +187,53 @@ class KissDownloader:
         currentpage = page.content
         soup = BeautifulSoup(currentpage, 'html.parser')
 
-# 16:9 vvv
-        if qual in ["1920x1080.mp4"] and soup.findAll('a', string="1920x1080.mp4") != []:
-            for link in soup.findAll('a', string="1920x1080.mp4"):
-                return [link.get('href'), ".mp4"]
-        elif qual in ["1920x1080.mp4", "1280x720.mp4"] and soup.findAll('a', string="1280x720.mp4") != []:
-            for link in soup.findAll('a', string="1280x720.mp4"):
-                return [link.get('href'), ".mp4"]
-        elif qual in ["1920x1080.mp4", "1280x720.mp4", "640x360.mp4"] and soup.findAll('a', string="640x360.mp4") != []:
-            for link in soup.findAll('a', string="640x360.mp4"):
-                return [link.get('href'), ".mp4"]
-        elif qual in ["1920x1080.mp4", "1280x720.mp4", "640x360.mp4", "320x180.3gp"] and soup.findAll('a', string="320x180.3gp") != []:
-            for link in soup.findAll('a', string="320x180.3gp"):
-                return [link.get('href'), ".3pg"]
-# 4:3 vvv
-        elif qual in ["1920x1080.mp4", "1280x720.mp4", "640x360.mp4", "320x180.3pg", "960x720.mp4"] and soup.findAll('a', string="960x720.mp4") != []:
-            for link in soup.findAll('a', string="960x720.mp4"):
-                return [link.get('href'), ".mp4"]
-        elif qual in ["1920x1080.mp4", "1280x720.mp4", "640x360.mp4", "320x180.3pg", "960x720.mp4", "480x360.mp4"] and soup.findAll('a', string="480x360.mp4") != []:
-            for link in soup.findAll('a', string="480x360.mp4"):
-                return [link.get('href'), ".mp4"]
-        elif qual in ["1920x1080.mp4", "1280x720.mp4", "640x360.mp4", "320x180.3pg", "960x720.mp4", "480x360.mp4", "320x240.3pg"] and soup.findAll('a', string="320x240.3pg") != []:
-            for link in soup.findAll('a', string="320x240.3pg"):
-                return [link.get('href'), ".3pg"]
-        else:
-            return ["false", ""]
+        #for link in soup.findAll('a', string="1920x1080.mp4"):
+        #    return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="1280x720.mp4"):
+            return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="960x720.mp4"):
+            return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="854x480.mp4"):
+            return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="480x360.mp4"):
+            return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="640x360.mp4"):
+            return [link.get('href'), ".mp4"]
+        for link in soup.findAll('a', string="320x180.3gp"):
+            return [link.get('href'), ".3pg"]
+        for link in soup.findAll('a', string="320x240.3pg"):
+            return [link.get('href'), ".3pg"]
+        return ["false", ""]
 
-    def download_video(self, url, name, destination):
+    def download_video(self, url, name, destination, episode):
         #makes sure the directory exists
         try:
             os.stat(destination)
         except:
             os.makedirs(destination)
 
-        filename = name
-        path = destination + filename
-        obj = pySmartDL.SmartDL(url, destination, progress_bar=False, fix_urls=True)
-        obj.start(blocking=False)
-        location = obj.get_dest()
+        try:
+            filename = name
+            path = destination + filename
+            obj = pySmartDL.SmartDL(url, destination, progress_bar=False, fix_urls=True)
+            obj.start(blocking=False)
+            location = obj.get_dest()
 
-        while True:
+            while True:
+                if obj.isFinished():
+                    break
+                print(name + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% [" + pySmartDL.utils.sizeof_human(obj.get_speed(human=False))+"/s]", end="\r")
+                #*epiode name* 0.38% 2.9 MB/s
+                time.sleep(.5)
             if obj.isFinished():
-                break
-            print(name + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% [" + pySmartDL.utils.sizeof_human(obj.get_speed(human=False))+"/s]", end="\r")
-            #*epiode name* 0.38% 2.9 MB/s
-            time.sleep(1)
-        if obj.isFinished():
-            time.sleep(1)
-            os.rename(location, path)
-        else:
-            print("Download of " + name + " failed")
-        return path
+                time.sleep(.5)
+                os.rename(location, path)
+                episode_current = episode
+            else:
+                print("Download of " + name + " failed")
+            return path
+        except:
+            print("except")
 
     def frange(self, start, stop, step):
         i = start
@@ -249,7 +247,34 @@ class KissDownloader:
 
     def download(self, p):
         episode_list = []
+        file_list = []
         global prefix
+        global episode_current
+        global download_limit
+        global destinationx
+        global movemp4
+        ecount = 0
+        epcount = p[5]
+        
+        #destination = destination + title
+        for infile in glob.glob(p[7]+"/*.mp4"):
+            infile = infile.replace(p[7],"")
+            infile = re.sub(r'.*_-_', '', infile)
+            infile = infile[:3]
+            #print(infile)
+            if(int(infile)):
+                file_list.append(infile)
+        #print(file_list)
+        if file_list:
+            if(int(max(file_list))):
+                epcount = int(max(file_list))+1
+            else:
+                print(str(epcount)+" is not int!")
+        
+        if(epcount > retrieve_last):
+            epcount = epcount - retrieve_last
+        #else:
+        #    print("No downloaded files found")
 
         #p = [user, password, title, anime, season, episode_min, episode_max, destination, quality, site]
         # takes a list of parameters and uses them to download the show
@@ -258,94 +283,107 @@ class KissDownloader:
             print("Login failed, try again")
             l = self.login(p[0], p[1], p[9])
 
-        time.sleep(3)
+        time.sleep(1)
         self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        time.sleep(3)
-
-
-        print("Retrieve episode url...")
-        for e in self.frange(float(p[5]), int(p[6])+1, 0.5):  # 5 and 6 are episodes min and max
-            page = self.get_episode_page(e, p[9])
-            # page = [page_url, isUncensored]
-            if page[0] == "":
-                pass
-            else:
-                video = self.get_video_src(page[0], p[8]) #8 is the quality
-                if p[8] in ["1920x1080.mp4", "1280x720.mp4", "960x720.mp4"]:
-                    resolution = "720p"
-                elif p[8] in ["480x360.mp4", "320x180.mp4"]:
-                    resolution = "480p"
-                elif p[8] in ["640x360.mp4", "320x180.mp4", "320x240.mp4", "320x180.3gp", "320x240.3pg"]:
-                    resolution = "360p"
+        time.sleep(1)
+        
+        print("Retrieve from episode " + str(epcount))
+        for e in self.frange(float(epcount), int(p[6])+1, 0.5):  # 5 and 6 are episodes min and max
+            if(ecount < int(download_limit)):
+                page = self.get_episode_page(e, p[9])
+                # page = [page_url, isUncensored]
+                if page[0] == "":
+                    pass
                 else:
-                    resolution = p[8]
-                # video = [url, file_extension]
-
-                if prefix != "":
-                    prefix2 = p[4] + prefix
-
-                if video[0] != 'false':
-                    if page[1]:  # if episode is called uncensored
-                        if e % 1 == 0:
-                            e = int(e)
-                            filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
-                        else:
-                            filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
+                    video = self.get_video_src(page[0], p[8]) #8 is the quality
+                    if p[8] in ["1920x1080.mp4", "1280x720.mp4", "960x720.mp4"]:
+                        resolution = "720p"
+                    elif p[8] in ["480x360.mp4", "320x180.mp4"]:
+                        resolution = "480p"
+                    elif p[8] in ["640x360.mp4", "320x180.mp4", "320x240.mp4", "320x180.3gp", "320x240.3pg"]:
+                        resolution = "360p"
                     else:
-                        if e % 1 == 0:
-                            e = int(e)
-                            filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
+                        resolution = p[8]
+                    # video = [url, file_extension]
+
+                    if prefix != "":
+                        prefix2 = p[4] + prefix
+
+                    if video[0] != 'false':
+                        if page[1]:  # if episode is called uncensored
+                            if e % 1 == 0:
+                                e = int(e)
+                                filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
+                            else:
+                                filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution +"_BD_Kiss" + video[1]  # 2 is the title
                         else:
-                            filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
-                    print("Resolved [" + filename + "]")
-                    episode_list.append((video[0], filename, p[7]))
-                else: print("Retrieve failed [" + str(e) + "] trying alternative quality")
+                            if e % 1 == 0:
+                                e = int(e)
+                                filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
+                            else:
+                                filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + resolution + "_Kiss" + video[1]  # 2 is the title
+                        print("Resolved [" + filename + "]")
+                        episode_list.append((video[0], filename, p[7], str(e).zfill(3)))
+                        ecount = ecount + 1
+                    else: print("Retrieve failed [" + str(e) + "] trying alternative quality")
+            else:
+                print("download_limit reached ("+download_limit+")")
+                break
+
+        #print(episode_list)
         for tuple in episode_list:
             url = tuple[0]
             filename = tuple[1]
             destination = tuple[2]
-
+            episode = tuple[3]
             my_file = Path(destination + filename)
             if my_file.is_file():
                 print("[" + filename + "] exists...")
             else:
-                self.download_video(url, filename, destination)
+                self.download_video(url, filename, destination, episode)
+                latest_episode = episode
                 print("downloaded " + filename)
 
-        # Done download
+        # get list total count
+        if(episode_list):
+            os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv.trash")
+            KissDownloader.init()
+        else:
+            print("Download complete!")
 
-        os.rename( dir_path + "/resolved.csv", dir_path + "/resolved.csv.old")
-        os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
+            if(movemp4 == 1):
+                print("Move *.mp4 into downloads folder")
+                destination = p[7]
+                source = os.listdir(destination)
+                for files in source:
+                    if files.endswith('.mp4'):
+                        shutil.move(os.path.join(destination,files), os.path.join(destinationx,files))
 
-        # Marked complete, retrieve next...
-        KissDownloader
-        website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality = KissDownloader.read_config()
-        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality])
-        episodes_list = []
-        for tup in episodes_list:
-            url = tup[0]
-            filename = tup[1]
-            destination = tup[2]
-            KissDownloader.download_video(KissDownloader, url, filename, destination)
+            os.rename( dir_path + "/resolved.csv", dir_path + "/resolved.csv.old")
+            os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
+            KissDownloader.init()
 
     def read_config():
+
+        # reset temp folder
+        if os.path.exists(dir_path + "/temp"):
+            shutil.rmtree(dir_path + "/temp")
+        os.mkdir(dir_path + "/temp")
 
         reader = csv.reader(open( dir_path + "/resolved.csv","r"),delimiter=",")
         newfile = open( dir_path + "/temp/resolved"+randnum+".csv", "a")
         writer = csv.writer(newfile)
         br = 0
-        first = 0
         for row in reader:
             try:
                 #print(row)
                 if(br==0):
-                    #print(row[4])
-                    newrow=[row[0],row[1],row[2],row[3],row[4],1]
+                    newrow=[row[0],row[1],row[2],row[3],1]
                     
                     title = row[0]
                     url = row[1]
-                    mal = row[2]
-                    episode_max = row[3]
+                    episode_max = row[2]
+                    mal = row[3]
                     br = 1
                     pass
                 else:
@@ -354,8 +392,10 @@ class KissDownloader:
                 print("EndIndex")
             except Exception:
                 print("Exception")
-            
-        #writer.writerows([newrow]) # uncomment to include first row from new file
+        '''
+        # uncomment to include first row into newfile
+        writer.writerows([newrow])
+        '''
         
         newfile.close()
 
@@ -363,6 +403,7 @@ class KissDownloader:
         for k, v in mapping.items():
             title = title.replace(k, v)
         
+        print('Initiate... [' + title + ']')
         return website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality
 
     def run_download(self):
@@ -374,18 +415,22 @@ class KissDownloader:
             destination = destination_folder + "/" + self[3] + "/"
         '''destination = destination_folder + "/"'''
         params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[9], self[0]]
-        print(params)
+        #print(params)
         KissDownloader(params)
+
+    def init():
+        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_max, 8 destination, 9 quality
+        website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality = KissDownloader.read_config()
+        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality])
+        episodes_list = []
+        for tup in episodes_list:
+            url = tup[0]
+            filename = tup[1]
+            destination = tup[2]
+            KissDownloader.download_video(KissDownloader, url, filename, destination, episode)
 
 if __name__ == "__main__":
     #params = [user, password, title, anime, season, episode_min, episode_max, destination, quality, site]
-    print('Load config...')
     KissDownloader
-    website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality = KissDownloader.read_config()
-    KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_max,destination,quality])
-    episodes_list = []
-    for tup in episodes_list:
-        url = tup[0]
-        filename = tup[1]
-        destination = tup[2]
-        KissDownloader.download_video(KissDownloader, url, filename, destination)
+    KissDownloader.init()
+
