@@ -3,29 +3,31 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from tempfile import NamedTemporaryFile
 from random import randint
-
 try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
 
-# Modified verison of https://github.com/BDrgon/KissDownloader all credit to origional author(s)
+# ---- CONFIG ----
 
-# TODO simultaneous downloads - KissDownloadManager.py WIP
-# TODO handling for episodes with multiple values e.g. 116-117
-
-website = "kissanime.ru" # ["kissanime.ru", "kisscartoon.me", "kissasian.com"]
+website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
-destination = "" # required (folder to download files)
-destinationx = destination # remove in next update
-download_limit = "40" # episode count to retrieve before download; recommended less than 50
-retrieve_last = "20" # rechecks if file exists, used because kissanime site is so unreliable
-episode_min = "0" # first episode to download
-move_mp4 = "1" # set to 1 to move all *.mp4 files to up directory on download complete
-episode_current = "0" # do not change
+destination = "" # required
+download_limit = "40"   # recommended values between 2-40; download_limit is enforced due to link expiry
 prefix = "" # not required
 
+# ---- END CONFIG ----
+
+# TODO Simultaneous downloads - DownloadManager.py WIP
+# TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
+# TODO Remove destinationx
+
+retrieve_last = download_limit/2
+destinationx = destination
+episode_min = "0"
+episode_current = "0"
+move_mp4 = "0" # set to 1 to move all *.mp4 files into destination on download complete
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
 
@@ -335,7 +337,7 @@ class KissDownloader:
             else:
                 self.download_video(url, filename, destination, episode)
                 latest_episode = episode
-                print("downloaded " + filename)
+                print("Downloaded " + filename + "\r")
 
         # get list total count
         if(episode_list):
