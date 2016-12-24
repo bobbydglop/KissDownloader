@@ -1,5 +1,5 @@
 # KissDownloader
-Downloads a list of shows from Kissanime.ru, Kisscartoon.me, Kissasian.com
+Downloads a list of shows from Kissanime.ru, Kisscartoon.me, Kissasian.com<br>
 Modification of https://github.com/BDrgon/KissDownloader with the ability to download from a list 
 
 **Installation**
