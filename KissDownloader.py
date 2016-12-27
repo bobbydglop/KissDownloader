@@ -131,9 +131,9 @@ class KissDownloader:
                             print("found [" + episodex + "]")
                             episodex = episodex.split("-")[0]
                     try:
-                        if(float(episodex) and float(episodex) > 0 and float(episodex)==float(episode)):
+                        if(float(episodex) > 0 and float(episodex)==float(episode)):
                             print(episodex)
-                            return ["http://" + site + "" + currentlink.lower(), True]
+                            return ["http://" + site + "" + currentlink.lower()False]
                         else:
                             pass
                     except ValueError:
