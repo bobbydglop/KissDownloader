@@ -9,9 +9,9 @@ Modification of https://github.com/BDrgon/KissDownloader, define a list of anime
 
 **Configuration**<br>
 Edit KissDownloader.py #CONFIG<br>
-* 'user_name' and 'user_password' as kissanime account
+* 'user_name' and 'user_password' as kissanime account<br>
 
-**Usage**
+**Usage**<br>
 KissDownloader.py resolved.csv spreadsheet<br>
 The following columns are required in the spreadsheet:<br>
 * Column 1: anime title
