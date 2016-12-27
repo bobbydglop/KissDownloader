@@ -14,8 +14,7 @@ website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
 destination = "" # required
-download_limit = "40"   # recommended values between 2-40; download_limit is enforced due to link expiry
-prefix = "" # not required
+download_limit = 40   # recommended values between 2-40; download_limit is enforced due to link expiry
 
 # ---- END CONFIG ----
 
@@ -23,11 +22,11 @@ prefix = "" # not required
 # TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
 # TODO Remove destinationx
 
-retrieve_last = download_limit/2
+retrieve_last = int(download_limit)/1.5
 destinationx = destination
 episode_min = "0"
 episode_current = "0"
-move_mp4 = "0" # set to 1 to move all *.mp4 files into destination on download complete
+prefix = "" # not required
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
 
@@ -137,6 +136,32 @@ class KissDownloader:
                         pass
                     elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
                         return ["http://" + site + "" + currentlink.lower(), False]
+                # experimental urls
+                for link in soup.findAll('a'):
+                    currentlink = link.get('href')
+                    if currentlink is None:
+                        pass
+                    else:
+                        currentlinkx = currentlink.lower()
+                        episodex = 0
+                        #print(currentlink)
+                        if("/anime/" in currentlinkx):
+                            currentlinkx = currentlinkx.replace("/anime/", "")
+                            animetitle = currentlinkx.split("/",1)
+                            for item in animetitle: # get last item
+                                episodexx=item
+                            if animetitle[0]+"-" in episodexx:
+                                episodex = episodexx.replace(animetitle[0]+"-", "")
+                                print("found [" + episodex + "]")
+                                episodex = episodex.split("-")[0]
+                        try:
+                            if(float(episodex) and float(episodex) > 0 and float(episodex)==float(episode)):
+                                print(episodex)
+                                return ["http://" + site + "" + currentlink.lower(), True]
+                            else:
+                                pass
+                        except ValueError:
+                            print("invalid episode")
             else:
                 ###for special episodes
                 episode = int(episode)
@@ -257,7 +282,6 @@ class KissDownloader:
         global episode_current
         global download_limit
         global destinationx
-        global movemp4
         ecount = 0
         epcount = p[5]
         
@@ -303,6 +327,8 @@ class KissDownloader:
                     # video = [url, file_extension, resolution]
                     if prefix != "":
                         prefix2 = p[4] + prefix
+                    else:
+                        prefix2 = ""
 
                     if video[0] != 'false':
                         if page[1]:  # if episode is called uncensored
@@ -346,7 +372,7 @@ class KissDownloader:
         else:
             print("Download complete!")
 
-            if(movemp4 == 1):
+            if(0 == 1): # only for developer
                 print("Move *.mp4 into downloads folder")
                 destination = p[7]
                 source = os.listdir(destination)
