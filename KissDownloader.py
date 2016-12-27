@@ -8,25 +8,25 @@ try:
 except ImportError:
     import urllib2
 
-# ---- CONFIG ----
+# ----  CONFIG START ---- #
 
 website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
-destination = "" # required
-download_limit = 40   # recommended values between 2-40; download_limit is enforced due to link expiry
+destination = "" # optional
+download_limit = 40 # recommended values 2-40
+                    # download_limit limits the amount of video url to retrieve before downloading
+                    # if a video url is retrieved but not downloaded in time (expired) then download will fail
 
-# ---- END CONFIG ----
+# ----  CONFIG END   ---- #
 
 # TODO Simultaneous downloads - DownloadManager.py WIP
-# TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
-# TODO Remove destinationx
+# TODO Handling for episodes values with hyphen seporator (e.g. 116-117
 
-retrieve_last = int(download_limit)/1.5
-destinationx = destination
+retrieve_last = download_limit/3
 episode_min = "0"
 episode_current = "0"
-prefix = "" # not required
+prefix = ""
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
 
@@ -78,114 +78,90 @@ class KissDownloader:
     def get_episode_page(self, episode, site):
         # parses the streaming page of an episode from the root page
         soup = BeautifulSoup(self.rootPage, 'html.parser')
-        ###for kisscartoon.me
-
-        if site == "kisscartoon.me":
-            if episode % 1 == 0:
-                ###for non special episodes
-                episode = int(episode)
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
-            else:
-                ###for special episodes
-                episode = int(episode)
-                # uncensored vvv
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
+                
+        if episode % 1 == 0:
+            ###for non special episodes
+            episode = int(episode)
+            # uncensored vvv
+            for link in soup.findAll('a'):
+                                    
+                status = ""
+                while (status == 503 and status != ""):
+                    req = requests.head(link)
+                    status = req.status_code
+                    print("status code: " + str(req.status_code))
+                    return status
+                    time.sleep(.5)
+                       
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), True]
+            # censored vvv
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), False]
+            # weird urls
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), False]
+            # experimental urls
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                else:
+                    currentlinkx = currentlink.lower()
+                    episodex = 0
+                    #print(currentlink)
+                    if("/anime/" in currentlinkx):
+                        currentlinkx = currentlinkx.replace("/anime/", "")
+                        animetitle = currentlinkx.split("/",1)
+                        for item in animetitle: # get last item
+                            episodexx=item
+                        if animetitle[0]+"-" in episodexx:
+                            episodex = episodexx.replace(animetitle[0]+"-", "")
+                            print("found [" + episodex + "]")
+                            episodex = episodex.split("-")[0]
+                    try:
+                        if(float(episodex) and float(episodex) > 0 and float(episodex)==float(episode)):
+                            print(episodex)
+                            return ["http://" + site + "" + currentlink.lower(), True]
+                        else:
+                            pass
+                    except ValueError:
+                        print("invalid episode")
         else:
-
-            #vvvvvv for kissanime.ru / kissasian.com - might seperate if needed
-            if episode % 1 == 0:
-                ###for non special episodes
-                episode = int(episode)
-                # uncensored vvv
-                for link in soup.findAll('a'):
-					
-                    status = ""
-                    while (status == 503 and status != ""):
-                        req = requests.head(link)
-                        status = req.status_code
-                        print("status code: " + str(req.status_code))
-                        return status
-                        time.sleep(.5)
-	                   
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), True]
-                # censored vvv
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
-                # weird urls
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
-                # experimental urls
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    else:
-                        currentlinkx = currentlink.lower()
-                        episodex = 0
-                        #print(currentlink)
-                        if("/anime/" in currentlinkx):
-                            currentlinkx = currentlinkx.replace("/anime/", "")
-                            animetitle = currentlinkx.split("/",1)
-                            for item in animetitle: # get last item
-                                episodexx=item
-                            if animetitle[0]+"-" in episodexx:
-                                episodex = episodexx.replace(animetitle[0]+"-", "")
-                                print("found [" + episodex + "]")
-                                episodex = episodex.split("-")[0]
-                        try:
-                            if(float(episodex) and float(episodex) > 0 and float(episodex)==float(episode)):
-                                print(episodex)
-                                return ["http://" + site + "" + currentlink.lower(), True]
-                            else:
-                                pass
-                        except ValueError:
-                            print("invalid episode")
-            else:
-                ###for special episodes
-                episode = int(episode)
-                # uncensored vvv
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), True]
-                # censored (normal) vvv
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
-                # weird urls
-                for link in soup.findAll('a'):
-                    currentlink = link.get('href')
-                    if currentlink is None:
-                        pass
-                    elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
-                        return ["http://" + site + "" + currentlink.lower(), False]
+            ###for special episodes
+            episode = int(episode)
+            # uncensored vvv
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), True]
+            # censored (normal) vvv
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), False]
+            # weird urls
+            for link in soup.findAll('a'):
+                currentlink = link.get('href')
+                if currentlink is None:
+                    pass
+                elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
+                    return ["http://" + site + "" + currentlink.lower(), False]
         return ["", False]
 
     def get_video_src(self, episode_page):
@@ -281,7 +257,6 @@ class KissDownloader:
         global prefix
         global episode_current
         global download_limit
-        global destinationx
         ecount = 0
         epcount = p[5]
         
@@ -355,13 +330,13 @@ class KissDownloader:
         for tuple in episode_list:
             url = tuple[0]
             filename = tuple[1]
-            destination = tuple[2]
+            destinationf = tuple[2]
             episode = tuple[3]
-            my_file = Path(destination + filename)
+            my_file = Path(destinationf + filename)
             if my_file.is_file():
                 print("[" + filename + "] exists...")
             else:
-                self.download_video(url, filename, destination, episode)
+                self.download_video(url, filename, destinationf, episode)
                 latest_episode = episode
                 print("Downloaded " + filename + "\r")
 
@@ -374,13 +349,12 @@ class KissDownloader:
 
             if(0 == 1): # only for developer
                 print("Move *.mp4 into downloads folder")
-                destination = p[7]
-                source = os.listdir(destination)
+                destinationf = p[7]
+                source = os.listdir(destinationf)
                 for files in source:
                     if files.endswith('.mp4'):
-                        shutil.move(os.path.join(destination,files), os.path.join(destinationx,files))
-
-            os.rename( dir_path + "/resolved.csv", dir_path + "/resolved.csv.old")
+                        shutil.move(os.path.join(destinationf,files), os.path.join(destination,files))
+            os.remove( dir_path + "/resolved.csv")
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
             KissDownloader.init()
 
@@ -429,12 +403,17 @@ class KissDownloader:
 
     def run_download(self):
         # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_max, 8 destination
-        destination_folder = self[8].replace("\\", "/")
-        if destination_folder.endswith('/'):
-            destination = destination_folder + self[3] + "/"
+        if self[8] == "":
+            if not os.path.exists(dir_path + "/downloads"):
+                os.mkdir(dir_path + "/downloads")
+            destination = dir_path + "/downloads"
         else:
-            destination = destination_folder + "/" + self[3] + "/"
-        '''destination = destination_folder + "/"'''
+            destination_folder = self[8].replace("\\", "/")
+            if destination_folder.endswith('/'):
+                destination = destination_folder + self[3] + "/"
+            else:
+                destination = destination_folder + "/" + self[3] + "/"
+            '''destination = destination_folder + "/"'''
         params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0]]
         #print(params)
         KissDownloader(params)
