@@ -371,24 +371,23 @@ class KissDownloader:
         br = 0
         for row in reader:
             try:
-                #print(row)
-                if(br==0):
-                    newrow=[row[0],row[1],row[2],row[3],1]
-                    
-                    title = row[0]
-                    url = row[1]
-                    episode_max = row[2]
-                    mal = row[3]
-                    br = 1
-                    pass
-                else:
-                    writer.writerows([row])
+                if row:
+                    #print(row)
+                    if(br==0):
+                        title = row[0]
+                        url = row[1]
+                        episode_max = row[2]
+                        mal = row[3]
+                        br = 1
+                        newrow=[row[0],row[1],row[2],row[3],1]
+                        pass
+                    else:
+                            writer.writerows([row])
             except IndexError:
                 print("EndIndex")
             except Exception:
                 print("Exception")
         '''
-        # uncomment to include first row into newfile
         writer.writerows([newrow])
         '''
         
