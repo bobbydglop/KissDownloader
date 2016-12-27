@@ -1,6 +1,4 @@
-__author__ = 'Dean'
 import pip
-
 try:
     pip.main(['install', '--upgrade', 'BeautifulSoup4'])
 except:
@@ -12,4 +10,4 @@ except:
 try:
     pip.main(['install', '--upgrade', 'cfscrape'])
 except:
-    pip.main(['install', 'cfscrape'])
+    pip.main(['install', 'cfscrape']
