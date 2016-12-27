@@ -7,7 +7,7 @@ Modification of https://github.com/BDrgon/KissDownloader, define a list of anime
 * Run UpdateModuals.py (as admin/superuser)
 * Install any missing python modules with `pip install {module}`.
 
-**Configuration**
+**Configuration**<br>
 Edit KissDownloader.py #CONFIG<br>
 * 'user_name' and 'user_password' as kissanime account
 
