@@ -1,5 +1,5 @@
 # KissDownloader
-Modification of https://github.com/BDrgon/KissDownloader, define a list of anime to download from kissanime.ru<br>
+Modification of https://github.com/BDrgon/KissDownloader, define a list of kissanime anime pages to download from kissanime.ru<br>
 
 
 **Installation**
