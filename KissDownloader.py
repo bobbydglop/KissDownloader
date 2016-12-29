@@ -1,4 +1,4 @@
-import urllib, csv, re, shutil, cfscrape, pySmartDL, requests, sys, os, time, pip, glob, shutil
+import urllib, csv, re, shutil, cfscrape, pySmartDL, requests, sys, os, time, pip, glob, shutil, random
 from pathlib import Path
 from bs4 import BeautifulSoup
 from tempfile import NamedTemporaryFile
@@ -13,19 +13,17 @@ except ImportError:
 website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
-destination = "" # optional
-download_limit = 40 # recommended values 2-40
-                    # download_limit limits the amount of video url to retrieve before downloading
-                    # if a video url is retrieved but not downloaded in time (expired) then download will fail
+destination = "" # (defaults to /downloads)
+download_limit = 30 # recommended values 2-40 (limits url to retrieve before downloading; retrieved url expire)
 
 # ----  CONFIG END   ---- #
 
 # TODO Simultaneous downloads - DownloadManager.py WIP
-# TODO Handling for episodes values with hyphen seporator (e.g. 116-117
+# TODO retrieve_last logic WIP
+# TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
 
-retrieve_last = download_limit/3
-episode_min = "0"
-episode_current = "0"
+retrieve_last = 0
+episode_current = 0
 prefix = ""
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
@@ -48,7 +46,7 @@ class KissDownloader:
             status = req.status_code
             print("status code: " + str(req.status_code))
             return status
-            time.sleep(.5)
+            time.sleep(random.randint(1,2))
         
         print("Logging in...  (5 second cloudflare check)")
         
@@ -91,7 +89,7 @@ class KissDownloader:
                     status = req.status_code
                     print("status code: " + str(req.status_code))
                     return status
-                    time.sleep(.5)
+                    time.sleep(random.randint(1,2))
                        
                 currentlink = link.get('href')
                 if currentlink is None:
@@ -165,7 +163,7 @@ class KissDownloader:
         return ["", False]
 
     def get_video_src(self, episode_page):
-        # parses the video source link from the streaming page, currently chooses the highest available quality
+        # parses the video source link from the streaming page, retrieves highest available quality
 
         x = True
         while x:
@@ -174,16 +172,14 @@ class KissDownloader:
                 #print(page.text)
                 url = page.url
                 if "Special/AreYouHuman?" in str(url):
-                    print("please click url and prove your human")
+                    print("Please click url and prove your human")
                     print(page.url)
                     input("Press Enter to continue...")
-                    print("please wait for system to refresh...")
-                    time.sleep(10)
                 x = False
             # try again if the page times out
             except:
                 print("loading " + episode_page + " timed out, trying again.")
-                time.sleep(5)
+                time.sleep(random.randint(5,10))
         time.sleep(1)
         #print("---")
         #print(page.url)
@@ -203,13 +199,13 @@ class KissDownloader:
         for link in soup.findAll('a', string="640x360.mp4"):
             return [link.get('href'), ".mp4", "360p"]
         '''
-        # uncomment if you want these resolutions (really low quality)
+        # uncomment if you want these resolutions (low quality)
         for link in soup.findAll('a', string="320x240.3pg"):
             return [link.get('href'), ".3pg", "240p"]
         for link in soup.findAll('a', string="320x180.3gp"):
             return [link.get('href'), ".3pg", "180p"]
         '''
-        return ["false", ""]
+        return ["false", "", ""]
 
     def download_video(self, url, name, destination, episode):
         #makes sure the directory exists
@@ -230,9 +226,9 @@ class KissDownloader:
                     break
                 print(name + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% [" + pySmartDL.utils.sizeof_human(obj.get_speed(human=False))+"/s]", end="\r")
                 #*epiode name* 0.38% 2.9 MB/s
-                time.sleep(.5)
+                time.sleep(1)
             if obj.isFinished():
-                time.sleep(.5)
+                time.sleep(1)
                 os.rename(location, path)
                 episode_current = episode
             else:
@@ -286,19 +282,26 @@ class KissDownloader:
             print("Login failed, try again")
             l = self.login(p[0], p[1], p[8])
 
-        time.sleep(1)
+        time.sleep(random.randint(1,2))
         self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        time.sleep(1)
+        time.sleep(random.randint(1,2))
         
-        print("Retrieve from episode " + str(epcount))
+        dead = 0
+        print("Retrieve from " + str(epcount))
         for e in self.frange(float(epcount), int(p[6])+1, 0.5):  # 5 and 6 are episodes min and max
             if(ecount < int(download_limit)):
+                time.sleep(random.randint(0,1))
                 page = self.get_episode_page(e, p[8])
                 # page = [page_url, isUncensored]
+                print(dead)
                 if page[0] == "":
+                    dead = dead + 1
+                    if(dead>=8):
+                        break
                     pass
                 else:
-                    video = self.get_video_src(page[0]) #8 is the quality
+                    dead = 0
+                    video = self.get_video_src(page[0])
                     # video = [url, file_extension, resolution]
                     if prefix != "":
                         prefix2 = p[4] + prefix
@@ -318,10 +321,10 @@ class KissDownloader:
                                 filename = prefix2 + p[2] + "_-_" + str(e).zfill(3) + "_" + video[2] + "_Kiss" + video[1]  # 2 is the title
                             else:
                                 filename = prefix2 + p[2] + "_-_" + self.zpad(str(e), 3) + "_" + video[2] + "_Kiss" + video[1]  # 2 is the title
-                        print("Resolved [" + filename + "]")
                         episode_list.append((video[0], filename, p[7], str(e).zfill(3)))
                         ecount = ecount + 1
-                    else: print("Retrieve failed [" + str(e) + "] trying alternative quality")
+                        print("Resolved [" + filename + "]")
+                    else: print("Retrieve failed [" + str(e) + "]")
             else:
                 print("download_limit reached ("+download_limit+")")
                 break
@@ -346,8 +349,7 @@ class KissDownloader:
             KissDownloader.init()
         else:
             print("Download complete!")
-
-            if(0 == 1): # only for developer
+            if(1 == 0): # developer (move *.mp4 to upper folder)
                 print("Move *.mp4 into downloads folder")
                 destinationf = p[7]
                 source = os.listdir(destinationf)
@@ -396,7 +398,7 @@ class KissDownloader:
         mapping = { ' ':'_', '-':'_', '`':'_', '@':'_', '#':'_', '$':'_', '%':'_', '^':'_', '&':'_', '*':'_', '(':'_', ')':'_', '[':'_', ']':'_', '|':'_', '+':'_', '=':'_', ':':'_', ';':'_', '~':'_', '___':'_', '__':'_'}
         for k, v in mapping.items():
             title = title.replace(k, v)
-        
+        episode_min = "0"
         print('Initiate... [' + title + ']')
         return website,user_name,user_password,title,url,mal,episode_min,episode_max,destination
 
