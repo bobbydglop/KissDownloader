@@ -133,7 +133,7 @@ class KissDownloader:
                     try:
                         if(float(episodex) > 0 and float(episodex)==float(episode)):
                             print(episodex)
-                            return ["http://" + site + "" + currentlink.lower()False]
+                            return ["http://" + site + "" + currentlink.lower(), False]
                         else:
                             pass
                     except ValueError:
