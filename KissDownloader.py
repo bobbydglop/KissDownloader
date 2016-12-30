@@ -13,8 +13,8 @@ except ImportError:
 website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
-destination = "" # (defaults to /downloads)
-download_limit = 30 # recommended values 2-40 (limits url to retrieve before downloading; retrieved url expire)
+destination = "" # optional (defaults to /downloads folder)
+download_limit = 12 # recommended values 2-40 (limits url to retrieve before downloading; retrieved url expire)
 
 # ----  CONFIG END   ---- #
 
@@ -287,13 +287,13 @@ class KissDownloader:
         time.sleep(random.randint(1,2))
         
         dead = 0
-        print("Retrieve from " + str(epcount))
+        #print("Retrieve from " + str(epcount))
         for e in self.frange(float(epcount), int(p[6])+1, 0.5):  # 5 and 6 are episodes min and max
             if(ecount < int(download_limit)):
                 time.sleep(random.randint(0,1))
                 page = self.get_episode_page(e, p[8])
                 # page = [page_url, isUncensored]
-                print(dead)
+                #print(dead)
                 if page[0] == "":
                     dead = dead + 1
                     if(dead>=8):
@@ -326,7 +326,7 @@ class KissDownloader:
                         print("Resolved [" + filename + "]")
                     else: print("Retrieve failed [" + str(e) + "]")
             else:
-                print("download_limit reached ("+download_limit+")")
+                print("download_limit reached ("+str(download_limit)+")")
                 break
 
         #print(episode_list)
