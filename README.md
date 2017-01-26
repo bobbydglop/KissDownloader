@@ -2,13 +2,17 @@
 Modification of https://github.com/BDrgon/KissDownloader<br>
 Automatically download anime from KissAnime from a spreadsheet<br>
 This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code.<br>
-Downloaded over 300 animes series.<br>
+Tested working with over 300 animes series.<br>
 <br>
 **Features:**
 * async downloader, with support to specifc download thread count
 * resolve from last downloaded episode
 * download queue_limit to prevet link expiry on downloads with large episode count
 * recheck failed downloads with retrieve_last to resolve files again and redownload
+
+**TO DO:**
+* Report failed downloads to text file
+* Handling for episodes values with hyphen seporator (e.g. 116-117)
 
 **Installation**
 * Install Python 3 [Download Here](https://www.python.org/downloads/)
