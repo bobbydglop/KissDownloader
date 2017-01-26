@@ -1,9 +1,9 @@
 # KissBot
-Modification of https://github.com/BDrgon/KissDownloader, define a list of kissanime anime pages to download from kissanime.ru<br>
-
+Modification of https://github.com/BDrgon/KissDownloader<br>
 Automatically download anime from KissAnime from a spreadsheet<br>
 This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code.<br>
 Tested download with over 300 animes series<br>
+<br>
 Features:<br>
 * async downloader, with support to specifc download thread count
 * resolve from last downloaded episode
@@ -15,7 +15,7 @@ Features:<br>
 * Install any missing python modules with `pip install {module}`
 
 **Configuration**<br>
-Edit KissDownloader.py #CONFIG<br>
+Required KissDownloader.py edits #CONFIG<br>
 * 'user_name' and 'user_password' as kissanime account
 * 'destination' download folder
 
