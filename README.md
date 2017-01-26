@@ -4,7 +4,7 @@ Automatically download anime from KissAnime from a spreadsheet<br>
 This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code.<br>
 Tested download with over 300 animes series<br>
 <br>
-Features:<br>
+**Features:**
 * async downloader, with support to specifc download thread count
 * resolve from last downloaded episode
 * download queue_limit to prevet link expiry on downloads with large episode count
