@@ -1,4 +1,4 @@
-# KissDownloader
+# KissBot
 Modification of https://github.com/BDrgon/KissDownloader, define a list of kissanime anime pages to download from kissanime.ru<br>
 
 Automatically download anime from KissAnime from a spreadsheet<br>
