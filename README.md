@@ -2,11 +2,11 @@
 Modification of https://github.com/BDrgon/KissDownloader, define a list of kissanime anime pages to download from kissanime.ru<br>
 
 Automatically download anime from KissAnime from a spreadsheet<br>
-This build is designed to reliably mass download anime, it features many improvements over BDrgons code.<br>
+This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code.<br>
+Tested download with over 300 animes series<br>
 Features:<br>
 * async downloader, with support to specifc download thread count
 * resolve from last downloaded episode
-* focus on reliability, many bug fixes and improvements
 * download queue_limit to prevet link expiry on downloads with large episode count
 * recheck failed downloads with retrieve_last to resolve files again and redownload
 
