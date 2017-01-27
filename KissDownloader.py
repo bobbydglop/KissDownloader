@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import urllib, scrapy, csv, re, shutil, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time
+import urllib, scrapy, csv, re, shutil, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -54,26 +54,31 @@ class KissDownloader(threading.Thread):
         try:
             if not os.path.exists(nestlist[0][2]):
               os.makedirs(nestlist[0][2])
+              print(nestlist[0][2]+"temp")
             if not os.path.exists(nestlist[0][2]+"temp"):
               os.makedirs(nestlist[0][2]+"temp")
         except:
             print("error creating directory")
-        try:
-            print("initiate episode " + nestlist[0][3])
-            urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-            print("completed episode " + nestlist[0][3])
-        except:
+
+        if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
+            print("file exists " + nestlist[0][1] + "...")
+        else:
             try:
-                time.sleep(1)
-                print("retry episode " + nestlist[0][3])
+                print("initiate episode " + nestlist[0][3])
                 urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
                 print("completed episode " + nestlist[0][3])
             except:
-                print("episode " + nestlist[0][3] + " failed")
-        try:
-            shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
-        except:
-            print("failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+                try:
+                    time.sleep(1)
+                    print("retry episode " + nestlist[0][3])
+                    urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
+                    print("completed episode " + nestlist[0][3])
+                except:
+                    print("episode " + nestlist[0][3] + " failed")
+            try:
+                shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+            except:
+                print("failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
         total.update(1)
         self.queue.task_done()
 
@@ -239,15 +244,15 @@ class KissDownloader(threading.Thread):
         for link in soup.findAll('a', string="640x360.mp4"):
             return [link.get('href'), ".mp4", "360p"]
 
-        for link in soup.findAll('a'): # todo
-            #print("link " + str(link.get('href')))
-            try:
-                if "openload" in link.get('href'):
-                    linkx = link.get('href')
-                    print("openload video host is being added")
-                    return ["false", "", ""]
-            except (RuntimeError, TypeError, NameError):
-                pass
+        for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload
+            ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
+            with ydl:
+                result = ydl.extract_info(link.get('href'),download=False) # extract info
+                if 'entries' in result:
+                    video = result['entries'][0] # playlist video
+                else:
+                    video = result # single video
+                return [video['url'], "."+video['ext']]
 
         return ["false", "", ""]
 
@@ -284,16 +289,15 @@ class KissDownloader(threading.Thread):
         #print(file_list)
         if file_list:
             if(int(max(file_list))):
-                if(len(file_list) < int(max(file_list))):
+                if(len(file_list) < int(max(file_list)) and p[5] == 0):
                     print("Downloaded episode " + str(max(file_list)) + ", filecount " + str(len(file_list)))
                     print("Recheck from 0")
                     epcount = p[5]
                 else:
                     epcount = int(max(file_list))+1
 
-        print(p)
         if(int(epcount) > int(retrieve_last)):
-            epcount = (int(p[5]) - int(retrieve_last))
+            epcount = (int(epcount) - int(retrieve_last))
 
         # takes a list of parameters and uses them to download the show
         l = self.login(p[0], p[1], p[8])  # 0 are the indices of the username and password from get_params()
@@ -302,10 +306,11 @@ class KissDownloader(threading.Thread):
             l = self.login(p[0], p[1], p[8])
 
         self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        if (int(epcount) < int(p[4]) and int(ecount) < int(p[4])): # 9 is episode_max
+        if (int(ecount) < int(p[4])): # 9 is episode_max
             print("Retrieve from " + str(epcount))
+
             for e in self.frange(float(epcount), int(p[6])+1, 1):  # 5 and 6 are episodes min and max
-                if(ecount < int(queue_limit) and epcount < int(p[4])):
+                if(int(ecount) < int(queue_limit) and int(epcount) < int(p[4])):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
                     #print(page)
@@ -368,12 +373,17 @@ class KissDownloader(threading.Thread):
         else:
             print("Download complete!")
             if(complete_dir): # developer (move *.mp4 to folder)
-                print("Move *.mp4 to " + complete_dir)
-                destinationf = p[7]
-                source = os.listdir(destinationf)
-                for files in source:
-                    if files.endswith('.mp4'):
-                        shutil.move(os.path.join(destinationf,files), os.path.join(complete_dir,files))
+                try:
+                    print("Move *.mp4 to " + complete_dir)
+                    destinationf = p[7]
+                    if destinationf.endswith('/'):
+                        destinationf = destinationf[:-1]
+                    source = os.listdir(destinationf)
+                    for files in source:
+                        if files.endswith('.mp4'):
+                            shutil.move(os.path.join(destinationf,files), os.path.join(complete_dir,files))
+                except:
+                    print("Exception failed to move mp4")
             os.remove( dir_path + "/resolved.csv")
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
             KissDownloader.init()
@@ -418,7 +428,7 @@ class KissDownloader(threading.Thread):
         mapping = { ' ':'_', '-':'_', '`':'_', '@':'_', ',':'_', '#':'_', '.':'', '$':'_', '%':'_', '^':'_', '&':'_', '*':'_', '(':'_', ')':'_', '[':'_', ']':'_', '|':'_', '+':'_', '=':'_', ':':'_', ';':'_', '~':'_', '___':'_', '__':'_'}
         for k, v in mapping.items():
             title = title.replace(k, v)
-        print(row)
+        #print(row)
         print('Initiate Kissbot... [' + title + ']')
         return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max
 
