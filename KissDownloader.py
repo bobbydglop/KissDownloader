@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import urllib, csv, re, shutil, cfscrape, pySmartDL, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time
+import urllib, scrapy, csv, re, shutil, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -10,27 +10,29 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from tempfile import NamedTemporaryFile
 from random import randint
+from selenium import webdriver
 
 # ----  CONFIG START ---- #
 
 website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
-destination = "" # optional (defaults to current directory /downloads folder)
+destination = "" # optional (defaults to /downloads folder)
+complete_dir = "" # move all downloaded mp4 to this location on download complete
 queue_limit = 30 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
-download_threads = 4 # recommended 2+
-retrieve_last = 5 # current_episode - retrieve_last to resolve files agian and redownload if failed
+download_threads = 4 # recommended 1+
+retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
 prefix = "" # filename prefix
 
 # ----  CONFIG END   ---- #
 
 # TODO Report failed download episode
+# TODO OpenLoad video host support
 # TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
-download_counter = 0
-total = tqdm.tqdm(download_counter)
+total = tqdm.tqdm(0)
 queue = Queue.Queue()
 start = time.time()
 
@@ -48,18 +50,30 @@ class KissDownloader(threading.Thread):
     def run(self):
       while True:
         host = self.queue.get()
-        nestlist = [x for x in episode_list if host in x[0]]
-        if not os.path.exists(nestlist[0][2]):
-          os.makedirs(nestlist[0][2])
-        if not os.path.exists(nestlist[0][2]+"temp"):
-          os.makedirs(nestlist[0][2]+"temp")
-        download_counter = int(download_counter) + 1
-        print("initiate episode " + nestlist[0][3])
-        urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-        download_counter = int(download_counter) - 1
-        print("completed episode " + nestlist[0][3])
-        shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
-        print(nestlist[0][2] + nestlist[0][1])
+        try:
+            nestlist = [x for x in episode_list if host in x[0]]
+            if not os.path.exists(nestlist[0][2]):
+              os.makedirs(nestlist[0][2])
+            if not os.path.exists(nestlist[0][2]+"temp"):
+              os.makedirs(nestlist[0][2]+"temp")
+        except:
+            print("error creating directory")
+        try:
+            print("initiate episode " + nestlist[0][3])
+            urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
+            print("completed episode " + nestlist[0][3])
+        except:
+            try:
+                time.sleep(1)
+                print("retry episode " + nestlist[0][3])
+                urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
+                print("completed episode " + nestlist[0][3])
+            except:
+                print("episode " + nestlist[0][3] + " failed")
+        try:
+            shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+        except:
+            print("failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
         total.update(1)
         self.queue.task_done()
 
@@ -206,14 +220,14 @@ class KissDownloader(threading.Thread):
             except:
                 print("loading " + episode_page + " timed out, trying again.")
                 time.sleep(random.randint(5,10))
-        time.sleep(1)
-        #print("---")
+        time.sleep(.5)
         #print(page.url)
         currentpage = page.content
         soup = BeautifulSoup(currentpage, 'html.parser')
 
         #for link in soup.findAll('a', string="1920x1080.mp4"):
         #    return [link.get('href'), ".mp4"]
+
         for link in soup.findAll('a', string="1280x720.mp4"):
             return [link.get('href'), ".mp4", "720p"]
         for link in soup.findAll('a', string="960x720.mp4"):
@@ -224,13 +238,17 @@ class KissDownloader(threading.Thread):
             return [link.get('href'), ".mp4", "480p"]
         for link in soup.findAll('a', string="640x360.mp4"):
             return [link.get('href'), ".mp4", "360p"]
-        '''
-        # uncomment if you want these resolutions (low quality)
-        for link in soup.findAll('a', string="320x240.3pg"):
-            return [link.get('href'), ".3pg", "240p"]
-        for link in soup.findAll('a', string="320x180.3gp"):
-            return [link.get('href'), ".3pg", "180p"]
-        '''
+
+        for link in soup.findAll('a'): # todo
+            #print("link " + str(link.get('href')))
+            try:
+                if "openload" in link.get('href'):
+                    linkx = link.get('href')
+                    print("openload video host is being added")
+                    return ["false", "", ""]
+            except (RuntimeError, TypeError, NameError):
+                pass
+
         return ["false", "", ""]
 
     def frange(self, start, stop, step):
@@ -250,7 +268,10 @@ class KissDownloader(threading.Thread):
         global prefix
         global queue_limit
         ecount = 0
-        epcount = int(p[5])-1 #temp folder
+        if(int(p[5])>0):
+            epcount = int(p[5])-1 #temp folder
+        else:
+            epcount = 0
 
         #destination = destination + title
         for infile in glob.glob(p[7]+"/*.mp4"):
@@ -289,6 +310,7 @@ class KissDownloader(threading.Thread):
                 if(ecount < int(queue_limit) and ecount < int(p[4])):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
+                    #print(page)
                     # page = [page_url, isUncensored]
                     if page[0] == "":
                         pass
@@ -332,7 +354,7 @@ class KissDownloader(threading.Thread):
         for host in episode_list:
           queue.put(host[0])
         queue.join()
-        print(queue)
+        print("queue " + str(queue))
         print("start download")
         for tuple in episode_list:
             url = tuple[0]
@@ -341,7 +363,6 @@ class KissDownloader(threading.Thread):
             episode = tuple[3]
             my_file = Path(destinationf + filename)
             #self.download_video(url, filename, destinationf, episode)
-        print("end test code")
 
         # get list total count
         if(episode_list):
@@ -349,13 +370,13 @@ class KissDownloader(threading.Thread):
             KissDownloader.init()
         else:
             print("Download complete!")
-            if(1 == 0): # on complete move *.mp4 to folder
+            if(complete_dir): # move *.mp4 to folder
                 print("Move *.mp4 into downloads folder")
                 destinationf = p[7]
                 source = os.listdir(destinationf)
                 for files in source:
                     if files.endswith('.mp4'):
-                        shutil.move(os.path.join(destinationf,files), os.path.join("/directory/to/move/to/folder",files))
+                        shutil.move(os.path.join(destinationf,files), os.path.join(complete_dir,files))
             os.remove( dir_path + "/resolved.csv")
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
             KissDownloader.init()
@@ -384,7 +405,7 @@ class KissDownloader(threading.Thread):
                         newrow=[row[0],row[1],row[2],row[3],1]
                         pass
                     else:
-                            writer.writerows([row])
+                        writer.writerows([row])
             except IndexError:
                 print("EndIndex")
             except Exception:
