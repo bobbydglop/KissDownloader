@@ -5,7 +5,7 @@ This build is designed to reliably mass download anime, it features many improve
 Tested working with over 300 animes series.<br>
 <br>
 **Features:**
-* async downloader, with support to specifc download thread count
+* async downloader, with support to specify download thread count
 * resolve from last downloaded episode
 * download queue_limit to prevet link expiry on downloads with large episode count
 * recheck failed downloads with retrieve_last to resolve files again and redownload
