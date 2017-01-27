@@ -350,11 +350,11 @@ class KissDownloader(threading.Thread):
           t.start()
 
         #get url
-        print(episode_list)
+        #print(episode_list)
         for host in episode_list:
           queue.put(host[0])
         queue.join()
-        print("queue " + str(queue))
+        #print("queue " + str(queue))
         print("start download")
         for tuple in episode_list:
             url = tuple[0]
@@ -370,8 +370,8 @@ class KissDownloader(threading.Thread):
             KissDownloader.init()
         else:
             print("Download complete!")
-            if(complete_dir): # move *.mp4 to folder
-                print("Move *.mp4 into downloads folder")
+            if(complete_dir): # developer (move *.mp4 to folder)
+                print("Move *.mp4 to " + complete_dir)
                 destinationf = p[7]
                 source = os.listdir(destinationf)
                 for files in source:
