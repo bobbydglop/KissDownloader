@@ -310,7 +310,7 @@ class KissDownloader(threading.Thread):
             print("Retrieve from " + str(epcount))
 
             for e in self.frange(float(epcount), int(p[6])+1, 1):  # 5 and 6 are episodes min and max
-                if(int(ecount) < int(queue_limit) and int(epcount) < int(p[4])):
+                if(int(ecount) < int(queue_limit) and int(ecount) < int(p[4])):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
                     #print(page)
