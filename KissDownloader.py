@@ -50,8 +50,8 @@ class KissDownloader(threading.Thread):
     def run(self):
       while True:
         host = self.queue.get()
+        nestlist = [x for x in episode_list if host in x[0]]
         try:
-            nestlist = [x for x in episode_list if host in x[0]]
             if not os.path.exists(nestlist[0][2]):
               os.makedirs(nestlist[0][2])
             if not os.path.exists(nestlist[0][2]+"temp"):
@@ -287,15 +287,13 @@ class KissDownloader(threading.Thread):
                 if(len(file_list) < int(max(file_list))):
                     print("Downloaded episode " + str(max(file_list)) + ", filecount " + str(len(file_list)))
                     print("Recheck from 0")
-                    epcount = 0
+                    epcount = p[5]
                 else:
                     epcount = int(max(file_list))+1
 
-            else:
-                print(str(epcount)+" is not int!")
-
+        print(p)
         if(int(epcount) > int(retrieve_last)):
-            epcount = (int(epcount) - int(retrieve_last))
+            epcount = (int(p[5]) - int(retrieve_last))
 
         # takes a list of parameters and uses them to download the show
         l = self.login(p[0], p[1], p[8])  # 0 are the indices of the username and password from get_params()
@@ -304,10 +302,10 @@ class KissDownloader(threading.Thread):
             l = self.login(p[0], p[1], p[8])
 
         self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        if (int(epcount) < int(p[4])):
+        if (int(epcount) < int(p[4]) and int(ecount) < int(p[4])): # 9 is episode_max
             print("Retrieve from " + str(epcount))
             for e in self.frange(float(epcount), int(p[6])+1, 1):  # 5 and 6 are episodes min and max
-                if(ecount < int(queue_limit) and ecount < int(p[4])):
+                if(ecount < int(queue_limit) and epcount < int(p[4])):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
                     #print(page)
@@ -362,7 +360,6 @@ class KissDownloader(threading.Thread):
             destinationf = tuple[2]
             episode = tuple[3]
             my_file = Path(destinationf + filename)
-            #self.download_video(url, filename, destinationf, episode)
 
         # get list total count
         if(episode_list):
@@ -399,10 +396,12 @@ class KissDownloader(threading.Thread):
                     if(br==0):
                         title = row[0]
                         url = row[1]
-                        episode_max = row[2]
+                        episode_count = row[2]
                         mal = row[3]
+                        episode_min = row[4]
+                        episode_max = row[5]
                         br = 1
-                        newrow=[row[0],row[1],row[2],row[3],1]
+                        newrow=[row[0],row[1],row[2],row[3],row[4],row[5],1]
                         pass
                     else:
                         writer.writerows([row])
@@ -419,12 +418,12 @@ class KissDownloader(threading.Thread):
         mapping = { ' ':'_', '-':'_', '`':'_', '@':'_', ',':'_', '#':'_', '.':'', '$':'_', '%':'_', '^':'_', '&':'_', '*':'_', '(':'_', ')':'_', '[':'_', ']':'_', '|':'_', '+':'_', '=':'_', ':':'_', ';':'_', '~':'_', '___':'_', '__':'_'}
         for k, v in mapping.items():
             title = title.replace(k, v)
-        episode_min = "0"
+        print(row)
         print('Initiate Kissbot... [' + title + ']')
-        return website,user_name,user_password,title,url,mal,episode_min,episode_max,destination
+        return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max
 
     def run_download(self):
-        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_max, 8 destination
+        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 8 episode_max
         if self[8] == "":
             if not os.path.exists(dir_path + "/downloads"):
                 os.mkdir(dir_path + "/downloads")
@@ -436,20 +435,20 @@ class KissDownloader(threading.Thread):
             else:
                 destination = destination_folder + "/" + self[3] + "/"
             '''destination = destination_folder + "/"'''
-        params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0]]
+        params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9]]
         #print(params)
         KissDownloader(params, queue)
 
     def init():
-        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_max, 8 destination
-        website,user_name,user_password,title,url,mal,episode_min,episode_max,destination = KissDownloader.read_config()
-        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_max,destination])
+        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max
+        website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max = KissDownloader.read_config()
+        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max])
         episodes_list = []
         for tup in episodes_list:
             url = tup[0]
             filename = tup[1]
             destination = tup[2]
-            KissDownloader.download_video(KissDownloader, url, filename, destination, episode)
+            #KissDownloader.download_video(KissDownloader, url, filename, destination, episode)
 
 if __name__ == "__main__":
     KissDownloader
