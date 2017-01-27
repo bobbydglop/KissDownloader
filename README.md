@@ -10,10 +10,6 @@ Tested working with over 300 animes series.<br>
 * download queue_limit to prevet link expiry on downloads with large episode count
 * recheck failed downloads with retrieve_last to resolve files again and redownload
 
-**TO DO:**
-* Report failed downloads to text file
-* Handling for episodes values with hyphen seporator (e.g. 116-117)
-
 **Installation**
 * Install Python 3 [Download Here](https://www.python.org/downloads/)
 * Install any missing python modules with `pip install {module}`
@@ -26,7 +22,7 @@ Required KissDownloader.py edits #CONFIG<br>
 **Usage**<br>
 KissDownloader.py resolved.csv spreadsheet<br>
 The following columns are required in the spreadsheet:<br>
-* Column 1: anime title
+* Column 1: anime title (used for filename)
 * Column 2: kissanime url
-* Column 3: episode count
-* Column 4: 0
+* Column 3: 0 (leave as 0, used by developer)
+* Column 4: episode count
