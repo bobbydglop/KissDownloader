@@ -53,9 +53,10 @@ class KissDownloader(threading.Thread):
         nestlist = [x for x in episode_list if host in x[0]]
         try:
             if not os.path.exists(nestlist[0][2]):
+              time.sleep(random.randint(0.1,1))
               os.makedirs(nestlist[0][2])
-              print(nestlist[0][2]+"temp")
             if not os.path.exists(nestlist[0][2]+"temp"):
+              time.sleep(random.randint(0.1,1))
               os.makedirs(nestlist[0][2]+"temp")
         except:
             print("error creating directory")
@@ -306,10 +307,10 @@ class KissDownloader(threading.Thread):
             l = self.login(p[0], p[1], p[8])
 
         self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        if (int(ecount) < int(p[4])): # 9 is episode_max
+        if (int(ecount) < (int(p[5]))): # 9 is episode_max
             print("Retrieve from " + str(epcount))
-
-            for e in self.frange(float(epcount), int(p[6])+1, 1):  # 5 and 6 are episodes min and max
+            print(p)
+            for e in self.frange(float(epcount), int(p[6]), 1):  # 5 and 6 are episodes min and max
                 if(int(ecount) < int(queue_limit) and int(ecount) < int(p[4])):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
@@ -344,7 +345,7 @@ class KissDownloader(threading.Thread):
                     print("queue_limit reached ("+str(queue_limit)+")")
                     break
             else:
-                print("retrieved episode limit ("+str(p[6])+")")
+                print("retrieved episode limit ("+str(p[4])+")")
 
         for i in range(download_threads):
           params=""
@@ -352,13 +353,11 @@ class KissDownloader(threading.Thread):
           t.setDaemon(True)
           t.start()
 
-        #get url
-        #print(episode_list)
-        for host in episode_list:
+        for host in episode_list: #get url
           queue.put(host[0])
         queue.join()
         #print("queue " + str(queue))
-        print("start download")
+        print("Start download")
         for tuple in episode_list:
             url = tuple[0]
             filename = tuple[1]
