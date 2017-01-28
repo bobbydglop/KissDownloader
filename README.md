@@ -3,7 +3,7 @@ Modification of https://github.com/BDrgon/KissDownloader<br>
 Automatically download anime from KissAnime from a spreadsheet<br>
 This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code.<br>
 Tested working with over 300 animes series.<br>
-Contact me (Discord username - Yubikiri) at https://discord.gg/W7uVTd7
+Contact me (Username - Yubikiri) at https://discord.gg/W7uVTd7 and be sure to click the 'Follow' button to get notified for updates and bugfixes.
 <br>
 **Features:**
 * async downloader, with support to specify download thread count
