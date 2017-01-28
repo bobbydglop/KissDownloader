@@ -24,7 +24,7 @@ The following columns are required in the spreadsheet:<br>
 * Column 1: anime title (used for filename)
 * Column 2: kissanime url
 * Column 3: 0 (leave as 0, used by developer)
-* Column 4: episode count (episode number to download to) (ignored if episode max isn't 0)
+* Column 4: episode count (episode count to download) (overwritten if column 6 isn't 0)
 * Column 5: 0 (refer to below explaination)
 * Column 6: 0 (refer to below explaination)
 <br>
