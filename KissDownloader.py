@@ -22,7 +22,7 @@ user_password = "" # required
 destination = "" # optional (defaults to /downloads folder)
 complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
-download_threads = 2 # recommended 1+
+download_threads = 4 # recommended 1+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
 prefix = "" # filename prefix
 
@@ -275,9 +275,9 @@ class KissDownloader(threading.Thread):
         self.rootPage = self.driver.page_source
         if (int(ecount) < (int(p[4]))):
             print("Retrieve from " + str(epcount))
-            if(p[4] and p[9]==0):
+            if(p[4] and int(p[9])==0):
                 maxretrieve = int(p[4])+2
-            else:
+            elif(int(p[9])>0):
                 maxretrieve = int(p[9])
             for e in self.frange(float(epcount), maxretrieve, 1):
                 if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
@@ -314,7 +314,7 @@ class KissDownloader(threading.Thread):
                     print("Queue limit reached ("+str(queue_limit)+")")
                     break
             else:
-                print("Retrieved episode limit ("+str(p[4])+")")
+                print("Retrieved episode limit ("+str(maxretrieve)+")")
 
 
         self.driver.close()
