@@ -30,4 +30,4 @@ The following columns are required in the spreadsheet:<br>
 * Column 5: 0 (refer to below explaination)
 * Column 6: 0 (refer to below explaination)
 <br>
-olumn 5 and 6 are used to define episode number, restricting the download of episodes between those two variables. Column 5 is the minimum starting episode, column 6 is the maximum episode. Useful to download only certain episodes.
+Column 5 and 6 are used to define episode number, restricting the download of episodes between those two variables. Column 5 is the minimum starting episode, column 6 is the maximum episode. Useful to download only certain episodes.
