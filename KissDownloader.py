@@ -22,7 +22,7 @@ user_password = "" # required
 destination = "" # optional (defaults to /downloads folder)
 complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
-download_threads = 4 # recommended 1+
+download_threads = 6 # recommended 2+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
 prefix = "" # filename prefix
 
@@ -60,31 +60,37 @@ class KissDownloader(threading.Thread):
         host = self.queue.get()
         nestlist = [x for x in episode_list if host in x[0]]
 
-        if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
-            print("File exists " + nestlist[0][1] + "...")
-        else:
-            try:
-                print("Initiate episode " + nestlist[0][3])
-                count = count + 1
-                urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-                print("Completed episode " + nestlist[0][3])
-                downloaded = 1
-                count = count - 1
-            except:
+        try:
+            if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
+                print("File exists " + nestlist[0][1] + "...")
+            else:
                 try:
-                    print("Retry episode " + nestlist[0][3])
+                    print("Initiate episode " + nestlist[0][3])
+                    count = count + 1
                     urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
                     print("Completed episode " + nestlist[0][3])
                     downloaded = 1
                     count = count - 1
                 except:
-                    print("Episode " + nestlist[0][3] + " failed")
-                    count = count - 1
+                    try:
+                        print("Retry episode " + nestlist[0][3])
+                        urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
+                        print("Completed episode " + nestlist[0][3])
+                        downloaded = 1
+                        count = count - 1
+                    except:
+                        print("Episode " + nestlist[0][3] + " failed")
+                        count = count - 1
+        except:
             try:
-                if(downloaded == 1):
-                    shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+                print("Error downloading episode " + nestlist[0][3])
             except:
-                print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+                print("Spreadsheet error")
+        try:
+            if(downloaded == 1):
+                shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+        except:
+            print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
         #total = tqdm.tqdm(count)
         #total.update(1)
@@ -287,7 +293,8 @@ class KissDownloader(threading.Thread):
                         pass
                     else:
                         video = self.get_video_src(page[0])
-                        prefix2 = p[6] + prefix
+                        if prefix:
+                            prefix2 = p[6] + prefix
                         if (video[0] != 'false'):
                             if e % 1 == 0:
                                 e = self.zpad(str(e), 3).replace(".0", "")
@@ -366,42 +373,47 @@ class KissDownloader(threading.Thread):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
 
-        reader = csv.reader(open( dir_path + "/resolved.csv","r"),delimiter=",")
-        newfile = open( dir_path + "/temp/resolved"+randnum+".csv", "a")
-        writer = csv.writer(newfile)
-        br = 0
-        for row in reader:
-            try:
-                if row:
-                    #print(row)
-                    if(br==0):
-                        title = row[0]
-                        url = row[1]
-                        episode_count = row[2]
-                        mal = row[3]
-                        episode_min = row[4]
-                        episode_max = row[5]
-                        br = 1
-                        newrow=[row[0],row[1],row[2],row[3],row[4],row[5],1]
-                        pass
-                    else:
-                        writer.writerows([row])
-            except IndexError:
-                print("EndIndex")
-            except Exception:
-                print("Exception")
-        '''
-        writer.writerows([newrow])
-        '''
+        try:
+            reader = csv.reader(open( dir_path + "/resolved.csv","r"),delimiter=",")
+            newfile = open( dir_path + "/temp/resolved"+randnum+".csv", "a")
+            writer = csv.writer(newfile)
+            br = 0
+            for row in reader:
+                try:
+                    if row:
+                        #print(row)
+                        if(br==0):
+                            title = row[0]
+                            url = row[1]
+                            episode_count = row[2]
+                            mal = row[3]
+                            episode_min = row[4]
+                            episode_max = row[5]
+                            br = 1
+                            newrow=[row[0],row[1],row[2],row[3],row[4],row[5],1]
+                            pass
+                        else:
+                            writer.writerows([row])
+                except IndexError:
+                    print("EndIndex")
+                except Exception:
+                    print("Exception")
+            '''
+            writer.writerows([newrow])
+            '''
 
-        newfile.close()
-
-        mapping = {'&&':'', '&':'_and_', "'s":'s', '__':'_', '__':'_', '__':'_', '___':'_' }
-        for k, v in mapping.items():
-            title = title.replace(k, v)
-        title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title)
-        title = title.rstrip('_')
-        title = title.rstrip('_')
+            newfile.close()
+        except:
+            sys.exit("Critical error: Unable to read spreadsheet")
+        try:
+            mapping = {'&&':'', '&':'_and_', "'s":'s', '__':'_', '__':'_', '__':'_', '___':'_' }
+            for k, v in mapping.items():
+                title = title.replace(k, v)
+            title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title)
+            title = title.rstrip('_')
+            title = title.rstrip('_')
+        except:
+            sys.exit("Critical error renaming title")
         print('Initiate... [' + str(title) + ']')
 
         if not os.path.exists(destination + "/" + title):
