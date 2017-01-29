@@ -1,7 +1,7 @@
 # KissBot
-Automatically download anime from KissAnime from a spreadsheet. This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code, tested working with over 300 animes series.<br>
+Automatically download anime from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code, tested working with over 300 series.<br>
 <br>
-Contact me (Username - Yubikiri) at https://discord.gg/W7uVTd7 and be sure to click the 'Watch' button to get notified for updates and bugfixes.<br>
+Contact via https://discord.gg/W7uVTd7 (Username - Yubikiri).
 <br>
 **Features:**
 * async downloader, with support to specify download thread count
