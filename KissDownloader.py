@@ -11,24 +11,24 @@ from bs4 import BeautifulSoup
 from tempfile import NamedTemporaryFile
 from random import randint
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.keys import Keys
 
 # ----  CONFIG START ---- #
 
-website = "kissanime.ru"
 user_name = "" # required
 user_password = "" # required
 destination = "" # optional (defaults to /downloads folder)
 complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
-download_threads = 4 # recommended 1+
+download_threads = 2 # recommended 1+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
-prefix = "" # optional (filename prefix)
+prefix = "" # filename prefix
 
 # ----  CONFIG END   ---- #
 
-# TODO Report failed download episode
-# TODO OpenLoad video host support
-# TODO Handling for episodes values with hyphen seporator (e.g. 116-117)
+# TODO Fix download bar (broken currently)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
@@ -39,7 +39,13 @@ count = 0
 class KissDownloader(threading.Thread):
     def __init__(self, params, queue):
         if(params):
-            self.scraper = cfscrape.create_scraper()
+            print("Load chrome...")
+            extension = webdriver.ChromeOptions()
+            extension.add_extension("./extension/ublock_origin.crx")
+            extension.add_extension("./extension/image_block.crx")
+            self.driver = webdriver.Chrome(chrome_options = extension)
+            self.driver.set_page_load_timeout(20)
+
             self.rootPage = ""
             self.file_extension = ""
             self.download(params)
@@ -53,13 +59,6 @@ class KissDownloader(threading.Thread):
       while True:
         host = self.queue.get()
         nestlist = [x for x in episode_list if host in x[0]]
-        try:
-            if not os.path.exists(nestlist[0][2]):
-              os.makedirs(nestlist[0][2])
-            if not os.path.exists(nestlist[0][2]+"temp"):
-              os.makedirs(nestlist[0][2]+"temp")
-        except:
-            print("Error creating directory")
 
         if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
             print("File exists " + nestlist[0][1] + "...")
@@ -87,156 +86,113 @@ class KissDownloader(threading.Thread):
             except:
                 print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-        total = tqdm.tqdm(count)
-        total.update(1)
+        #total = tqdm.tqdm(count)
+        #total.update(1)
         self.queue.task_done()
 
     def login(self, user, pw, site):
-
         status = ""
         while (status == 503 and status != ""):
-            req = requests.head("http://"+str(site))
+            req = requests.head(str(site))
             status = req.status_code
             print("status code: " + str(req.status_code))
             return status
             time.sleep(random.randint(1,2))
 
         print("Login...  (5 second cloudflare check)")
+        self.driver.get(str(site) + "/Login")
+        time.sleep(5)
+        self.driver.implicitly_wait(10)
 
-        # define login page
-        login_url = "http://" + str(site) + "/Login"
+        username = self.driver.find_element_by_id("username")
+        password = self.driver.find_element_by_id("password")
+        # type login info into fields
+        username.send_keys(user)
+        password.send_keys(pw)
+        # send the filled out login form and wait
+        password.send_keys(Keys.RETURN)
+        time.sleep(5)
 
-        #define user and pass
-        username = user
-        password = pw
+        #print(self.driver.current_url)
 
-        #define payload
-        payload = {
-            'username': username,
-            'password': password
-        }
-
-        #login
-        self.scraper.get(login_url)
-        login = self.scraper.post(login_url, data=payload)
-
-        # confirm that login was successful and return a bool
-        if login.url == "https://" + site + "/login" or login.url == "http://" + site + "/login":
+        if str(self.driver.current_url).lower() == site + "/login" or str(self.driver.current_url).lower() == site + "/login": # confirm login success, return bool
             return False
         else:
             return True
 
-    def get_episode_page(self, episode, site):
-        # parses the streaming page of an episode from the root page
+    def get_episode_page(self, episode, site): # parse video url, get episode page from list
         soup = BeautifulSoup(self.rootPage, 'html.parser')
-
         if episode % 1 == 0:
             ###for non special episodes
             episode = int(episode)
             # uncensored vvv
             for link in soup.findAll('a'):
-
-                status = ""
-                while (status == 503 and status != ""):
-                    req = requests.head(link)
-                    status = req.status_code
-                    print("status code: " + str(req.status_code))
-                    return status
-                    time.sleep(random.randint(1,2))
-
                 currentlink = link.get('href')
                 if currentlink is None:
                     pass
                 elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), True]
+                    return [site + "" + currentlink.lower(), True]
             # censored vvv
             for link in soup.findAll('a'):
                 currentlink = link.get('href')
                 if currentlink is None:
                     pass
-                elif "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), False]
+                else:
+                    if "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
+                        return [site + "" + currentlink.lower(), False]
             # weird urls
             for link in soup.findAll('a'):
                 currentlink = link.get('href')
                 if currentlink is None:
                     pass
                 elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), False]
+                    return [site + "" + currentlink.lower(), False]
             # experimental urls
             for link in soup.findAll('a'):
                 currentlink = link.get('href')
-                if currentlink is None:
+                if(currentlink is None):
                     pass
                 else:
-                    currentlinkx = currentlink.lower()
-                    episodex = 0
-                    #print(currentlink)
-                    if("/anime/" in currentlinkx):
-                        currentlinkx = currentlinkx.replace("/anime/", "")
-                        animetitle = currentlinkx.split("/",1)
-                        for item in animetitle: # get last item
-                            episodexx=item
-                        if animetitle[0]+"-" in episodexx:
-                            episodex = episodexx.replace(animetitle[0]+"-", "")
-                            print("found [" + episodex + "]")
-                            episodex = episodex.split("-")[0]
-                    try:
-                        if(float(episodex) > 0 and float(episodex)==float(episode)):
-                            print(episodex)
-                            return ["http://" + site + "" + currentlink.lower(), False]
-                        else:
+                    if("episode-" in link.get('href').lower()):
+                        currentlinkx = currentlink.lower()
+                        episodex = 0
+                        if ("/anime/" in currentlinkx):
+                            currentlinkx = currentlinkx.replace("/anime/", "")
+                            animetitle = currentlinkx.split("/", 1)
+                            for item in animetitle:  # get last item
+                                episodexx = item
+                            if animetitle[0] + "-" in episodexx:
+                                episodex = episodexx.replace(animetitle[0] + "-", "")
+                                if self.debug_mode:
+                                    print("found [" + episodex + "]")
+                                episodex = episodex.split("-")[0]
+                        try:
+                            if float(episodex) == float(episode):
+                                return [site + "" + currentlink.lower(), False]
+                            else:
+                                pass
+                        except ValueError:
                             pass
-                    except ValueError:
-                        print("invalid episode")
-        else:
-            ###for special episodes
-            episode = int(episode)
-            # uncensored vvv
-            for link in soup.findAll('a'):
-                currentlink = link.get('href')
-                if currentlink is None:
-                    pass
-                elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), True]
-            # censored (normal) vvv
-            for link in soup.findAll('a'):
-                currentlink = link.get('href')
-                if currentlink is None:
-                    pass
-                elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), False]
-            # weird urls
-            for link in soup.findAll('a'):
-                currentlink = link.get('href')
-                if currentlink is None:
-                    pass
-                elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
-                    return ["http://" + site + "" + currentlink.lower(), False]
-        return ["", False]
+            return ["", False]
 
-    def get_video_src(self, episode_page):
-        # parses the video source link from the streaming page, retrieves highest available quality
-
+    def get_video_src(self, episode_page): # parse the video source link, retrieve highest available quality
         x = True
         while x:
             try:
-                page = self.scraper.get(episode_page)
+                page = self.driver.get(episode_page)
                 #print(page.text)
-                url = page.url
+                url = self.driver.current_url
                 if "Special/AreYouHuman?" in str(url):
-                    print("Captcha " + str(page.url))
-                    webbrowser.open_new_tab(page.url)
+                    print("Captcha " + str(self.driver.current_url))
+                    webbrowser.open(self.driver.current_url)
                     input("Input Enter to continue...")
                     episode = episode-1
                 x = False
-            # try again if the page times out
             except:
-                print("loading " + episode_page + " timed out, trying again.")
-                time.sleep(random.randint(5,10))
-        time.sleep(.5)
+                print("loading " + episode_page + " timed out, retrying...")
+                time.sleep(random.randint(2,10))
         #print(page.url)
-        currentpage = page.content
+        currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
 
         #for link in soup.findAll('a', string="1920x1080.mp4"):
@@ -286,19 +242,16 @@ class KissDownloader(threading.Thread):
         global queue_limit
         ecount = 0
         if(int(p[5])>0):
-            epcount = int(p[5])-1 #temp folder
+            epcount = int(p[5])-1 # temp folder
         else:
             epcount = 0
 
-        #destination = destination + title
         for infile in glob.glob(p[7]+"/*.mp4"):
             infile = infile.replace(p[7],"")
             infile = re.sub(r'.*_-_', '', infile)
             infile = infile[:3]
-            #print(infile)
             if(int(infile)):
                 file_list.append(int(infile))
-        #print(file_list)
         if file_list:
             if(int(max(file_list))):
                 if(len(file_list) < int(max(file_list)) and p[5] == 0):
@@ -307,43 +260,54 @@ class KissDownloader(threading.Thread):
                     epcount = p[5]
                 else:
                     epcount = int(max(file_list))+1
-
         if(int(epcount) > int(retrieve_last)):
             epcount = (int(epcount) - int(retrieve_last))
 
-        # takes a list of parameters and uses them to download the show
         try:
-            l = self.login(p[0], p[1], p[8])  # 0 are the indices of the username and password from get_params()
+            l = self.login(p[0], p[1], p[8])
             while not l:
                 print("Login failed, try again")
                 l = self.login(p[0], p[1], p[8])
         except:
-            print("Unable to connect")
-        self.rootPage = self.scraper.get(p[3]).content  # 3 is the index of the url
-        if (int(ecount) < (int(p[4]))): # 9 is episode_max
+            sys.exit("Error message")
+        self.driver.get(p[3])
+        time.sleep(3)
+        self.rootPage = self.driver.page_source
+        if (int(ecount) < (int(p[4]))):
             print("Retrieve from " + str(epcount))
-            for e in self.frange(float(epcount), int(p[4])+5, 1):  # 5 and 6 are episodes min and max
-                if(int(ecount) < int(queue_limit) and int(ecount) < int(p[4])+5):
+            if(p[4] and p[9]==0):
+                maxretrieve = int(p[4])+2
+            else:
+                maxretrieve = int(p[9])
+            for e in self.frange(float(epcount), maxretrieve, 1):
+                if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
                     time.sleep(1)
                     page = self.get_episode_page(e, p[8])
-                    #print(page)
-                    # page = [page_url, isUncensored]
                     if page[0] == "":
                         pass
                     else:
                         video = self.get_video_src(page[0])
-                        # video = [url, file_extension, resolution]
                         prefix2 = p[6] + prefix
                         if (video[0] != 'false'):
                             if e % 1 == 0:
-                                e = str(e)
-                            if page[1]:  # if episode is called uncensored
-                                filename = prefix2 + p[2] + "_-_" + self.zpad(e, 3).replace(".0", "") + "_" + video[2] +"_BD_KA" + video[1]
+                                e = self.zpad(str(e), 3).replace(".0", "")
+                            # check if hyphen seporator
+                            varxx = page[0].split('?id=', 1)[0]
+                            # 001-002
+                            number7 = sum(c.isdigit() for c in varxx[-7:])
+                            if(number7 == 6 and "-" in varxx[-7:]):
+                                e = str("00" + varxx[-7:])
+                            # 01-02
+                            number5 = sum(c.isdigit() for c in varxx[-5:])
+                            if(number5 == 4 and "-" in varxx[-5:]):
+                                e = str("00" + varxx[-5:])
+                            if page[1]:  # uncensored
+                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] +"_BD_KA" + video[1]
                             else:
-                                filename = prefix2 + p[2] + "_-_" + self.zpad(e, 3).replace(".0", "") + "_" + video[2] + "_KA" + video[1]
-                            episode_list.append((video[0], filename, p[7], str(e).zfill(3).replace(".0", "")))
+                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] + "_KA" + video[1]
+                            episode_list.append((video[0], filename, p[7], e))
                             ecount = ecount + 1
-                            print("Resolved [" + filename + "]")
+                            print("Resolved [" + str(filename) + "]")
                         else:
                             print("Retrieve failed [" + str(e) + "]")
                 else:
@@ -352,16 +316,20 @@ class KissDownloader(threading.Thread):
             else:
                 print("Retrieved episode limit ("+str(p[4])+")")
 
+
+        self.driver.close()
+
         for i in range(download_threads):
           params=""
           t = KissDownloader(params, queue)
           t.setDaemon(True)
           t.start()
 
-        for host in episode_list: #get url
+        for host in episode_list: # url from episode_list
           queue.put(host[0])
         queue.join()
-        #print("queue " + str(queue))
+
+
         print("Start download")
         for tuple in episode_list:
             url = tuple[0]
@@ -370,13 +338,12 @@ class KissDownloader(threading.Thread):
             episode = tuple[3]
             my_file = Path(destinationf + filename)
 
-        # get list total count
         if(episode_list):
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv.trash")
             KissDownloader.init()
         else:
             print("Download complete!")
-            if(complete_dir): # developer (move *.mp4 to folder)
+            if(complete_dir): # move *.mp4 to complete_dir
                 try:
                     print("Move *.mp4 to " + complete_dir)
                     destinationf = p[7]
@@ -388,13 +355,13 @@ class KissDownloader(threading.Thread):
                             shutil.move(os.path.join(destinationf,files), os.path.join(complete_dir,files))
                 except:
                     print("Exception failed to move mp4")
+
             os.remove( dir_path + "/resolved.csv")
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
             KissDownloader.init()
 
     def read_config():
 
-        # reset temp folder
         if os.path.exists(dir_path + "/temp"):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
@@ -429,17 +396,26 @@ class KissDownloader(threading.Thread):
 
         newfile.close()
 
-        mapping = { '&&':'', '&':' and ', "'s":'s', '__':' ', '___':' ', '__':' ', '__':' '}
+        mapping = {'&&':'', '&':'_and_', "'s":'s', '__':'_', '__':'_', '__':'_', '___':'_' }
         for k, v in mapping.items():
             title = title.replace(k, v)
         title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title)
         title = title.rstrip('_')
-        #print(row)
-        print('Initiate Kissbot... [' + str(title) + ']')
+        title = title.rstrip('_')
+        print('Initiate... [' + str(title) + ']')
+
+        if not os.path.exists(destination + "/" + title):
+            os.mkdir(destination + "/" + title)
+        if not os.path.exists(destination + "/" + title + "/temp"):
+            os.mkdir(destination + "/" + title + "/temp")
+
+        website = '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))
+        if website.endswith('/'):
+            website = website[:-1]
+
         return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max
 
     def run_download(self):
-        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 8 episode_max
         if self[8] == "":
             if not os.path.exists(dir_path + "/downloads"):
                 os.mkdir(dir_path + "/downloads")
@@ -450,7 +426,6 @@ class KissDownloader(threading.Thread):
                 destination = str(destination_folder) + str(self[3]) + "/"
             else:
                 destination = str(destination_folder) + "/" + str(self[3]) + "/"
-            '''destination = destination_folder + "/"'''
         params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9]]
         #print(params)
         KissDownloader(params, queue)
