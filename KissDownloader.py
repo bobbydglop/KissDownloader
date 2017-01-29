@@ -24,7 +24,7 @@ complete_dir = "" # optional (move all downloaded mp4 to this location on downlo
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
 download_threads = 6 # recommended 2+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
-prefix = "" # filename prefix
+prefix = "AnimePahe_" # filename prefix
 
 # ----  CONFIG END   ---- #
 
@@ -296,7 +296,7 @@ class KissDownloader(threading.Thread):
                         if prefix:
                             prefix2 = p[6] + prefix
                         else:
-                            prefix2 = ""st 
+                            prefix2 = ""
                         if (video[0] != 'false'):
                             if e % 1 == 0:
                                 e = self.zpad(str(e), 3).replace(".0", "")
