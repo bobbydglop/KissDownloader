@@ -17,14 +17,14 @@ from selenium.webdriver.common.keys import Keys
 
 # ----  CONFIG START ---- #
 
-user_name = "onevoltten" # required
-user_password = "MAXUMX8208G1" # required
-destination = "/home/onevoltten/bot/downloads" # optional (defaults to /downloads folder)
-complete_dir = "/home/onevoltten/bot/queue" # optional (move all downloaded mp4 to this location on download complete)
+user_name = "" # required
+user_password = "" # required
+destination = "" # optional (defaults to /downloads folder)
+complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
 download_threads = 6 # recommended 2+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
-prefix = "AnimePahe_" # filename prefix
+prefix = "" # filename prefix
 
 # ----  CONFIG END   ---- #
 
