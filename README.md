@@ -11,6 +11,8 @@ Contact me (Username - Yubikiri) at https://discord.gg/W7uVTd7 and be sure to cl
 
 **Installation**
 * Install Python 3 [Download Here](https://www.python.org/downloads/)
+* Download and copy [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/) to folder of script
+* Install [Chrome](https://www.google.com.au/chrome/browser/desktop/#eula)
 * Install any missing python modules with `pip install {module}`
 
 **Configuration**<br>
