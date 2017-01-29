@@ -17,10 +17,10 @@ from selenium.webdriver.common.keys import Keys
 
 # ----  CONFIG START ---- #
 
-user_name = "" # required
-user_password = "" # required
-destination = "" # optional (defaults to /downloads folder)
-complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
+user_name = "onevoltten" # required
+user_password = "MAXUMX8208G1" # required
+destination = "/home/onevoltten/bot/downloads" # optional (defaults to /downloads folder)
+complete_dir = "/home/onevoltten/bot/queue" # optional (move all downloaded mp4 to this location on download complete)
 queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
 download_threads = 6 # recommended 2+
 retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
@@ -144,7 +144,7 @@ class KissDownloader(threading.Thread):
                 if currentlink is None:
                     pass
                 else:
-                    if "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
+                    if "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(1) + "?" in currentlink.lower():
                         return [site + "" + currentlink.lower(), False]
             # weird urls
             for link in soup.findAll('a'):
@@ -196,7 +196,7 @@ class KissDownloader(threading.Thread):
                 x = False
             except:
                 print("loading " + episode_page + " timed out, retrying...")
-                time.sleep(random.randint(2,10))
+                time.sleep(random.randint(5,10))
         #print(page.url)
         currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
@@ -299,6 +299,7 @@ class KissDownloader(threading.Thread):
                             prefix2 = ""
                         if (video[0] != 'false'):
                             if e % 1 == 0:
+                                print(e)
                                 e = self.zpad(str(e), 3).replace(".0", "")
                             # check if hyphen seporator
                             varxx = page[0].split('?id=', 1)[0]
