@@ -295,6 +295,8 @@ class KissDownloader(threading.Thread):
                         video = self.get_video_src(page[0])
                         if prefix:
                             prefix2 = p[6] + prefix
+                        else:
+                            prefix2 = ""st 
                         if (video[0] != 'false'):
                             if e % 1 == 0:
                                 e = self.zpad(str(e), 3).replace(".0", "")
