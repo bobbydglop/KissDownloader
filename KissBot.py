@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import urllib, scrapy, csv, re, shutil, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
+import urllib, scrapy, csv, re, shutil,fnmatch, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -15,37 +15,31 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
+# TODO Fix download bar
+# TODO Improve get_episode_page function to work with unformatted url, implement naming schema
+
 # ----  CONFIG START ---- #
 
 user_name = "" # required
 user_password = "" # required
-destination = "" # optional (defaults to /downloads folder)
-complete_dir = "" # optional (move all downloaded mp4 to this location on download complete)
-queue_limit = 35 # recommended 2-40 (limits url to retrieve before downloading; retrieved url expire)
-download_threads = 6 # recommended 2+
-retrieve_last = 0 # current_episode - retrieve_last to resolve files agian and redownload if failed
-prefix = "" # filename prefix
+destination = "" # optional [defaults to /downloads subfolder]
+queue_limit = 35 # 2-40 [url expire after time] [retrieve large count can trigger captcha]
+retrieve_last = 0 # [experimental - not recommended]
+complete_dir = "" # [developer only]
+prefix = "" # [developer only]
 
 # ----  CONFIG END   ---- #
-
-# TODO Fix download bar (broken currently)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
 queue = Queue.Queue()
 start = time.time()
 count = 0
+downloading = 0
 
 class KissDownloader(threading.Thread):
     def __init__(self, params, queue):
         if(params):
-            print("Load chrome...")
-            extension = webdriver.ChromeOptions()
-            extension.add_extension("./extension/ublock_origin.crx")
-            extension.add_extension("./extension/image_block.crx")
-            self.driver = webdriver.Chrome(chrome_options = extension)
-            self.driver.set_page_load_timeout(20)
-
             self.rootPage = ""
             self.file_extension = ""
             self.download(params)
@@ -107,15 +101,13 @@ class KissDownloader(threading.Thread):
 
         print("Login...  (5 second cloudflare check)")
         self.driver.get(str(site) + "/Login")
-        time.sleep(5)
-        self.driver.implicitly_wait(10)
-
+        time.sleep(7)
+        self.driver.implicitly_wait(20)
         username = self.driver.find_element_by_id("username")
         password = self.driver.find_element_by_id("password")
-        # type login info into fields
         username.send_keys(user)
         password.send_keys(pw)
-
+        time.sleep(1)
         # send the filled out login form and wait
         password.send_keys(Keys.RETURN)
         time.sleep(5)
@@ -196,25 +188,27 @@ class KissDownloader(threading.Thread):
                     episode = episode-1
                 x = False
             except:
-                print("loading " + episode_page + " timed out, retrying...")
+                print("Timeout [" + str(episode_page) + "] Retrying...")
                 time.sleep(random.randint(5,10))
         #print(page.url)
         currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
 
-        #for link in soup.findAll('a', string="1920x1080.mp4"):
-        #    return [link.get('href'), ".mp4"]
-
-        for link in soup.findAll('a', string="1280x720.mp4"):
+        seventwenty = pattern = re.compile(r'x720.mp4')
+        foureighty = pattern = re.compile(r'x480.mp4')
+        threesixty = pattern = re.compile(r'x360.mp4')
+        finalcheck = pattern = re.compile(r'.mp4')
+        for link in soup.findAll('a', text=seventwenty):
             return [link.get('href'), ".mp4", "720p"]
-        for link in soup.findAll('a', string="960x720.mp4"):
-            return [link.get('href'), ".mp4", "720p"]
-        for link in soup.findAll('a', string="854x480.mp4"):
+        for link in soup.findAll('a', text=foureighty):
             return [link.get('href'), ".mp4", "480p"]
-        for link in soup.findAll('a', string="480x360.mp4"):
-            return [link.get('href'), ".mp4", "480p"]
-        for link in soup.findAll('a', string="640x360.mp4"):
+        for link in soup.findAll('a', text=threesixty):
             return [link.get('href'), ".mp4", "360p"]
+        for link in soup.findAll('a', text=finalcheck):
+            resolutionr = link
+            resolutionr = str(resolutionr).rsplit('.mp4')[0][-3:]
+            if(int(resolutionr) and int(resolutionr) > 359 and int(resolutionr) < 2000):
+                return [link.get('href'), ".mp4", resolutionr+"p"]
 
         for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload
             ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
@@ -270,22 +264,31 @@ class KissDownloader(threading.Thread):
         if(int(epcount) > int(retrieve_last)):
             epcount = (int(epcount) - int(retrieve_last))
 
-        try:
-            l = self.login(p[0], p[1], p[8])
-            while not l:
-                print("Login failed, try again")
+        if(p[4] and int(p[9])==0):
+            maxretrieve = int(p[4])+1
+        elif(int(p[9])>0):
+            maxretrieve = int(p[9])
+
+        if(int(ecount) < maxretrieve):
+            try:
+                print("Load chrome...")
+                extension = webdriver.ChromeOptions()
+                extension.add_extension("./extension/ublock_origin.crx")
+                extension.add_extension("./extension/image_block.crx")
+                self.driver = webdriver.Chrome(chrome_options = extension)
+                self.driver.set_page_load_timeout(25)
                 l = self.login(p[0], p[1], p[8])
-        except:
-            sys.exit("Error message")
+                while not l:
+                    print("Login failed, try again")
+                    l = self.login(p[0], p[1], p[8])
+            except:
+                sys.exit("Error message")
+
         self.driver.get(p[3])
         time.sleep(3)
         self.rootPage = self.driver.page_source
-        if (int(ecount) < (int(p[4]))):
-            print("Retrieve from " + str(epcount))
-            if(p[4] and int(p[9])==0):
-                maxretrieve = int(p[4])+2
-            elif(int(p[9])>0):
-                maxretrieve = int(p[9])
+        if (int(ecount) < (int(p[4])+1)):
+            print("Retrieve " + str(epcount) + "/" + str(p[4]))
             for e in self.frange(float(epcount), maxretrieve, 1):
                 if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
                     time.sleep(1)
@@ -327,16 +330,19 @@ class KissDownloader(threading.Thread):
 
         self.driver.close()
 
-        for i in range(download_threads):
-          params=""
-          t = KissDownloader(params, queue)
-          t.setDaemon(True)
-          t.start()
+
+        global downloading
+        if(downloading == 0):
+            for i in range(6):
+                downloading = 1
+                params=""
+                t = KissDownloader(params, queue)
+                t.setDaemon(True)
+                t.start()
 
         for host in episode_list: # url from episode_list
           queue.put(host[0])
         queue.join()
-
 
         print("Start download")
         for tuple in episode_list:
@@ -352,24 +358,32 @@ class KissDownloader(threading.Thread):
         else:
             print("Download complete!")
             if(complete_dir): # move *.mp4 to complete_dir
-                try:
-                    print("Move *.mp4 to " + complete_dir)
-                    destinationf = p[7]
-                    if destinationf.endswith('/'):
-                        destinationf = destinationf[:-1]
-                    source = os.listdir(destinationf)
-                    for files in source:
-                        if files.endswith('.mp4'):
-                            shutil.move(os.path.join(destinationf,files), os.path.join(complete_dir,files))
-                except:
-                    print("Exception failed to move mp4")
+                file_count = []
+                for infile in glob.glob(p[7]+"/*.mp4"):
+                    file_count.append(infile)
+                print(str(len(file_count)) + "/" + str(p[4]))
+                if(len(file_count) >= int(p[4])):
+                    try:
+                        finaldestination = destination + "/" + p[2]
+                        for files in os.listdir(finaldestination):
+                            if files.endswith('.mp4'):
+                                shutil.move(os.path.join(finaldestination,files), os.path.join(complete_dir,files))
+                        try:
+                            os.rmdir(finaldestination + "/temp")
+                            os.rmdir(finaldestination)
+                        except:
+                            print("Folder delete failed")
+                    except:
+                        print("Files move failed")
+
+                else:
+                    print("Invalid filecount!")
 
             os.remove( dir_path + "/resolved.csv")
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv")
             KissDownloader.init()
 
     def read_config():
-
         if os.path.exists(dir_path + "/temp"):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
@@ -407,12 +421,11 @@ class KissDownloader(threading.Thread):
         except:
             sys.exit("Critical error: Unable to read spreadsheet")
         try:
-            mapping = {'&&':'', '&':'_and_', "'s":'s', '__':'_', '__':'_', '__':'_', '___':'_' }
-            for k, v in mapping.items():
+            for k, v in {'&&':'', '&':'_and_', "'s":'s'}.items():
                 title = title.replace(k, v)
-            title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title)
-            title = title.rstrip('_')
-            title = title.rstrip('_')
+            title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title) # alphanumeric only
+            title = re.sub('_+', '_', title) # replace multiple _
+            title = title.rstrip('_') # remove last underscore
         except:
             sys.exit("Critical error renaming title")
         print('Initiate... [' + str(title) + ']')
@@ -455,4 +468,4 @@ class KissDownloader(threading.Thread):
 
 if __name__ == "__main__":
     KissDownloader
-    KissDownloader.init() 
+    KissDownloader.init()
