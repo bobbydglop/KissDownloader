@@ -174,7 +174,7 @@ class KissDownloader(threading.Thread):
                             pass
             return ["", False]
 
-    def get_video_src(self, episode_page): # parse the video source link, retrieve highest available quality
+    def get_video_src(self, episode_page, resolution): # parse the video source link, retrieve highest available quality
         x = True
         while x:
             try:
@@ -194,21 +194,33 @@ class KissDownloader(threading.Thread):
         currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
 
-        seventwenty = pattern = re.compile(r'x720.mp4')
-        foureighty = pattern = re.compile(r'x480.mp4')
-        threesixty = pattern = re.compile(r'x360.mp4')
-        finalcheck = pattern = re.compile(r'.mp4')
-        for link in soup.findAll('a', text=seventwenty):
-            return [link.get('href'), ".mp4", "720p"]
-        for link in soup.findAll('a', text=foureighty):
-            return [link.get('href'), ".mp4", "480p"]
-        for link in soup.findAll('a', text=threesixty):
-            return [link.get('href'), ".mp4", "360p"]
-        for link in soup.findAll('a', text=finalcheck):
-            resolutionr = link
-            resolutionr = str(resolutionr).rsplit('.mp4')[0][-3:]
-            if(int(resolutionr) and int(resolutionr) > 359 and int(resolutionr) < 2000):
-                return [link.get('href'), ".mp4", resolutionr+"p"]
+        try:
+            resolution = int(resolution)
+        except:
+            sys.exit("Resolution error " + str(resolution))
+
+        if(resolution >= 1080 or resolution == 0):
+            teneighty = pattern = re.compile(r'x1080.mp4')
+            for link in soup.findAll('a', text=teneighty):
+                return [link.get('href'), ".mp4", "1080p"]
+        if(resolution >= 720 or resolution == 0):
+            seventwenty = pattern = re.compile(r'x720.mp4')
+            for link in soup.findAll('a', text=seventwenty):
+                return [link.get('href'), ".mp4", "720p"]
+        if(resolution >= 480 or resolution == 0):
+            foureighty = pattern = re.compile(r'x480.mp4')
+            for link in soup.findAll('a', text=foureighty):
+                return [link.get('href'), ".mp4", "480p"]
+        if(resolution >= 360 or resolution == 0):
+            threesixty = pattern = re.compile(r'x360.mp4')
+            for link in soup.findAll('a', text=threesixty):
+                return [link.get('href'), ".mp4", "360p"]
+        if(resolution >= 0):
+            finalcheck = pattern = re.compile(r'.mp4')
+            for link in soup.findAll('a', text=finalcheck):
+                resolutionr = str(link).rsplit('.mp4')[0][-3:]
+                if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
+                    return [link.get('href'), ".mp4", resolutionr+"p"]
 
         for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload
             ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
@@ -296,7 +308,7 @@ class KissDownloader(threading.Thread):
                     if page[0] == "":
                         pass
                     else:
-                        video = self.get_video_src(page[0])
+                        video = self.get_video_src(page[0], p[10])
                         if prefix:
                             prefix2 = p[6] + prefix
                         else:
@@ -327,9 +339,7 @@ class KissDownloader(threading.Thread):
             else:
                 print("Retrieved episode limit ("+str(maxretrieve)+")")
 
-
         self.driver.close()
-
 
         global downloading
         if(downloading == 0):
@@ -388,38 +398,41 @@ class KissDownloader(threading.Thread):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
 
-        try:
-            reader = csv.reader(open( dir_path + "/resolved.csv","r"),delimiter=",")
-            newfile = open( dir_path + "/temp/resolved"+randnum+".csv", "a")
-            writer = csv.writer(newfile)
-            br = 0
-            for row in reader:
-                try:
-                    if row:
-                        #print(row)
-                        if(br==0):
-                            title = row[0]
-                            url = row[1]
-                            episode_count = row[2]
-                            mal = row[3]
-                            episode_min = row[4]
-                            episode_max = row[5]
-                            br = 1
-                            newrow=[row[0],row[1],row[2],row[3],row[4],row[5],1]
-                            pass
+        reader = csv.reader(open( dir_path + "/resolved.csv","r"),delimiter=",")
+        newfile = open( dir_path + "/temp/resolved"+randnum+".csv", "a")
+        writer = csv.writer(newfile)
+        br = 0
+        for row in reader:
+            try:
+                if row:
+                    #print(row)
+                    if(br==0):
+                        title = row[0]
+                        url = row[1]
+                        episode_count = row[2]
+                        mal = row[3]
+                        episode_min = row[4]
+                        episode_max = row[5]
+                        if(int(row[6]) >= 0 and int(row[6]) <= 1080):
+                            if(int(row[6]) >= 360):
+                                print("Resolution limited to " + str(row[6]) + "p")
+                            resolution = row[6]
                         else:
-                            writer.writerows([row])
-                except IndexError:
-                    print("EndIndex")
-                except Exception:
-                    print("Exception")
-            '''
-            writer.writerows([newrow])
-            '''
+                            sys.exit("Column 6 resolution out of bounds ['360','480','720','1080']")
+                        br = 1
+                        newrow=[row[0],row[1],row[2],row[3],row[4],row[5],row[6],1]
+                        pass
+                    else:
+                        writer.writerows([row])
+            except IndexError:
+                print("EndIndex")
+            except Exception:
+                print("Exception")
+        '''
+        writer.writerows([newrow])
+        '''
 
-            newfile.close()
-        except:
-            sys.exit("Critical error: Unable to read spreadsheet")
+        newfile.close()
         try:
             for k, v in {'&&':'', '&':'_and_', "'s":'s'}.items():
                 title = title.replace(k, v)
@@ -439,7 +452,7 @@ class KissDownloader(threading.Thread):
         if website.endswith('/'):
             website = website[:-1]
 
-        return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max
+        return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max,resolution
 
     def run_download(self):
         if self[8] == "":
@@ -452,14 +465,14 @@ class KissDownloader(threading.Thread):
                 destination = str(destination_folder) + str(self[3]) + "/"
             else:
                 destination = str(destination_folder) + "/" + str(self[3]) + "/"
-        params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9]]
+        params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9], self[10]]
         #print(params)
         KissDownloader(params, queue)
 
     def init():
-        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max
-        website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max = KissDownloader.read_config()
-        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max])
+        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
+        website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max, resolution = KissDownloader.read_config()
+        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max,resolution])
         episodes_list = []
         for tup in episodes_list:
             url = tup[0]
