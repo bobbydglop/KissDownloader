@@ -1,13 +1,14 @@
 # KissBot
-Automatically download anime from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. This build is designed to reliably mass download anime, it features many improvements and bug fixes over BDrgons code, tested working with over 300 series.<br>
+Automatically download video from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. This build is designed to reliably mass download videos, this code has many improvements and fixes over the main release.<br>
 <br>
 Contact via https://discord.gg/W7uVTd7 (Username - Yubikiri).<br>
 <br>
 **Features:**
-* async downloader, with support to specify download thread count
-* resolve from last downloaded episode
-* download queue_limit to prevet link expiry on downloads with large episode count
-* logic to prevent redownloading downloaded files
+* Parrallel downloader, with support to specify how many asynchronous downloads are allowed at the same time.
+* Limit the queue limit to prevent link expiry on downloads with large episode count
+* Resumable operations, cancel the operation anytime and you'll have no issues when restarting
+* Files are checked if downloaded, to prevent redownloading downloaded files. Resumes from last downloaded episode.
+* Defined max resolution to download
 
 **Installation**
 * Install Python 3 [Download Here](https://www.python.org/downloads/)
@@ -16,18 +17,16 @@ Contact via https://discord.gg/W7uVTd7 (Username - Yubikiri).<br>
 * Install any missing python modules with `pip install {module}`
 
 **Configuration**<br>
-Required KissDownloader.py edits #CONFIG<br>
-* 'user_name' and 'user_password' as kissanime account
-* 'destination' download folder
+Required KissDownloader.py configuration #CONFIG<br>
+* 'user_name' and 'user_password' as kiss account
 
 **Usage**<br>
 KissDownloader.py resolved.csv spreadsheet<br>
 The following columns are required in the spreadsheet:<br>
-* Column 1: anime title (used for filename)
-* Column 2: kissanime url
-* Column 3: 0 (leave as 0, used by developer)
-* Column 4: episode count (episode count to download) (overwritten if column 6 isn't 0)
-* Column 5: 0 (refer to below explaination)
-* Column 6: 0 (refer to below explaination)
-<br>
-Column 5 and 6 are used to define episode number, restricting the download of episodes between those two variables. Column 5 is the minimum starting episode, column 6 is the maximum episode. Useful to download only certain episodes.
+* Column 1: [Filename]
+* Column 2: [Kiss url to page listing episodes]
+* Column 3: 0 [Ignore, used by developer]
+* Column 4: 0 [Episode count, numeric value]
+* Column 5: 0 (Optional) [Initial episode to download from, numeric value]
+* Column 6: 0 (Optional) [Max episode to download from, numeric value]
+* Column 7: 0 [Restrict resolution to quality equal to or lower than ('360','480','720','1080'), value range 0-1080]
