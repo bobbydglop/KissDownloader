@@ -20,13 +20,15 @@ from selenium.webdriver.common.keys import Keys
 
 # ----  CONFIG START ---- #
 
-user_name = "" # required
-user_password = "" # required
-destination = "" # optional [defaults to /downloads subfolder]
-queue_limit = 35 # 2-40 [url expire after time] [retrieve large count can trigger captcha]
-retrieve_last = 0 # [experimental - not recommended]
-complete_dir = "" # [developer only]
-prefix = "" # [developer only]
+# Credentials for kissanime, kisscartoon and kissasion each require seporate registration
+user_name = "" # Required
+user_password = "" # Required
+destination = "" # Optional [Defaults '/downloads' subfolder]
+download_threads = 8 # Number of asynchronous downloads at one time [Recommended 4-16]
+queue_limit = 35 # Number of url to retreieve before downloading [url expire after time] [large count can trigger captcha]
+retrieve_last = 0 # [depreicated]
+complete_dir = "" # Move downloaded mp4 to directory [developer]
+prefix = "" # [developer]
 
 # ----  CONFIG END   ---- #
 
@@ -249,6 +251,7 @@ class KissDownloader(threading.Thread):
 
     def download(self, p):
         global episode_list
+        global downloading
         episode_list = []
         file_list = []
         global prefix
@@ -258,6 +261,14 @@ class KissDownloader(threading.Thread):
             epcount = int(p[5])-1 # temp folder
         else:
             epcount = 0
+
+        if(downloading == 0): # start downloader, wait for files
+            for i in range(int(download_threads)):
+                downloading = 1
+                params=""
+                t = KissDownloader(params, queue)
+                t.setDaemon(True)
+                t.start()
 
         for infile in glob.glob(p[7]+"/*.mp4"):
             infile = infile.replace(p[7],"")
@@ -303,7 +314,7 @@ class KissDownloader(threading.Thread):
             print("Retrieve " + str(epcount) + "/" + str(p[4]))
             for e in self.frange(float(epcount), maxretrieve, 1):
                 if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
-                    time.sleep(1)
+                    time.sleep(random.randint(1,3)) # longer delay lowers captcha risk
                     page = self.get_episode_page(e, p[8])
                     if page[0] == "":
                         pass
@@ -331,6 +342,8 @@ class KissDownloader(threading.Thread):
                             episode_list.append((video[0], filename, p[7], e))
                             ecount = ecount + 1
                             print("Resolved [" + str(filename) + "]")
+
+                            queue.put(video[0]) # add video url to download queue
                         else:
                             print("Retrieve failed [" + str(e) + "]")
                 else:
@@ -341,26 +354,15 @@ class KissDownloader(threading.Thread):
 
         self.driver.close()
 
-        global downloading
-        if(downloading == 0):
-            for i in range(6):
-                downloading = 1
-                params=""
-                t = KissDownloader(params, queue)
-                t.setDaemon(True)
-                t.start()
+        queue.join() # wait for queue to complete
 
-        for host in episode_list: # url from episode_list
-          queue.put(host[0])
-        queue.join()
-
-        print("Start download")
-        for tuple in episode_list:
-            url = tuple[0]
-            filename = tuple[1]
-            destinationf = tuple[2]
-            episode = tuple[3]
-            my_file = Path(destinationf + filename)
+        #print("Start download")
+        #for tuple in episode_list:
+        #    url = tuple[0]
+        #    filename = tuple[1]
+        #    destinationf = tuple[2]
+        #    episode = tuple[3]
+        #    my_file = (destinationf + filename)
 
         if(episode_list):
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv.trash")
@@ -470,6 +472,16 @@ class KissDownloader(threading.Thread):
         KissDownloader(params, queue)
 
     def init():
+
+        try: # Test network connection before processing
+            url = "http://google.com"
+            print("Sending request to {}".format(url))
+            response = urllib2.urlopen(url, timeout=5)
+            print("Connected!")
+        except:
+            print("Please check your network connection!")
+            sys.exit(0)
+
         # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
         website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max, resolution = KissDownloader.read_config()
         KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max,resolution])
