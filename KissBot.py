@@ -25,7 +25,7 @@ user_name = "" # Required
 user_password = "" # Required
 destination = "" # Optional [Defaults '/downloads' subfolder]
 download_threads = 8 # Number of asynchronous downloads at one time [Recommended 4-16]
-queue_limit = 35 # Number of url to retreieve before downloading [url expire after time] [large count can trigger captcha]
+queue_limit = 25 # Number of url to retreieve before downloading [url expire after time] [large count can trigger captcha]
 retrieve_last = 0 # [depreicated]
 complete_dir = "" # Move downloaded mp4 to directory [developer]
 prefix = "" # [developer]
@@ -61,10 +61,10 @@ class KissDownloader(threading.Thread):
                 print("File exists " + nestlist[0][1] + "...")
             else:
                 try:
-                    print("Initiate episode " + nestlist[0][3])
+                    print("Download " + nestlist[0][3] + "...")
                     count = count + 1
                     urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-                    print("Completed episode " + nestlist[0][3])
+                    print("Completed " + nestlist[0][3] + "!")
                     downloaded = 1
                     count = count - 1
                 except:
@@ -104,7 +104,7 @@ class KissDownloader(threading.Thread):
         print("Login...  (5 second cloudflare check)")
         self.driver.get(str(site) + "/Login")
         time.sleep(7)
-        self.driver.implicitly_wait(20)
+        self.driver.implicitly_wait(40)
         username = self.driver.find_element_by_id("username")
         password = self.driver.find_element_by_id("password")
         username.send_keys(user)
@@ -185,16 +185,20 @@ class KissDownloader(threading.Thread):
                 url = self.driver.current_url
                 if "Special/AreYouHuman?" in str(url):
                     print("Captcha " + str(self.driver.current_url))
-                    webbrowser.open(self.driver.current_url)
-                    input("Input Enter to continue...")
+                    #webbrowser.open(self.driver.current_url)
+                    while("Special/AreYouHuman?" in str(self.driver.current_url)):
+                        time.sleep(1)
                     episode = episode-1
-                x = False
+                else:
+                    x = False
             except:
                 print("Timeout [" + str(episode_page) + "] Retrying...")
                 time.sleep(random.randint(5,10))
         #print(page.url)
         currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
+
+        time.sleep(1)
 
         try:
             resolution = int(resolution)
@@ -294,24 +298,26 @@ class KissDownloader(threading.Thread):
 
         if(int(ecount) < maxretrieve):
             try:
-                print("Load chrome...")
                 extension = webdriver.ChromeOptions()
                 extension.add_extension("./extension/ublock_origin.crx")
                 extension.add_extension("./extension/image_block.crx")
                 self.driver = webdriver.Chrome(chrome_options = extension)
-                self.driver.set_page_load_timeout(25)
+                self.driver.set_page_load_timeout(40)
+            except:
+                sys.exit("Chrome failed to load")
+            try:
                 l = self.login(p[0], p[1], p[8])
                 while not l:
                     print("Login failed, try again")
                     l = self.login(p[0], p[1], p[8])
             except:
-                sys.exit("Error message")
+                sys.exit("Login failed")
 
         self.driver.get(p[3])
         time.sleep(3)
         self.rootPage = self.driver.page_source
         if (int(ecount) < (int(p[4])+1)):
-            print("Retrieve " + str(epcount) + "/" + str(p[4]))
+            print("Retrieve from " + str(epcount) + " of " + str(p[4]))
             for e in self.frange(float(epcount), maxretrieve, 1):
                 if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
                     time.sleep(random.randint(1,3)) # longer delay lowers captcha risk
@@ -354,15 +360,14 @@ class KissDownloader(threading.Thread):
 
         self.driver.close()
 
-        queue.join() # wait for queue to complete
-
-        #print("Start download")
-        #for tuple in episode_list:
-        #    url = tuple[0]
-        #    filename = tuple[1]
-        #    destinationf = tuple[2]
-        #    episode = tuple[3]
-        #    my_file = (destinationf + filename)
+        global count
+        last_count = 9001
+        while(count > 0):
+            time.sleep(1)
+            if(int(count) != int(last_count) or int(last_count) > 9000 and int(count) < int(download_threads)):
+                print("> " + str(count) + " remain")
+                last_count = count
+        #queue.join() # wait for queue to complete
 
         if(episode_list):
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv.trash")
