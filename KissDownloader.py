@@ -15,22 +15,25 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
+# TODO GUI to manage insertion of new entries, display console output, start/stop button
 # TODO Fix download bar
-# TODO Improve get_episode_page function to work with unformatted url, implement naming schema
+# TODO Add support for movies and files not following the standard naming schema
+# TODO Handle queueing multiple entries to fill download_threads
 
 # ----  CONFIG START ---- #
 
-# Credentials for kissanime, kisscartoon and kissasion each require seporate registration
-user_name = "" # Required
-user_password = "" # Required
-destination = "" # Optional [Defaults '/downloads' subfolder]
-download_threads = 8 # Number of asynchronous downloads at one time [Recommended 4-16]
-queue_limit = 25 # Number of url to retreieve before downloading [url expire after time] [large count can trigger captcha]
-retrieve_last = 0 # [depreicated]
-complete_dir = "" # Move downloaded mp4 to directory [developer]
-prefix = "" # [developer]
+username = "" # Required
+userpassword = "" # Required
+destination_folder = "" # Optional
+download_threads = 8 # Asynchronous downloads count [recommended 4-16]
 
-# ----  CONFIG END   ---- #
+# ----  CONFIG END ---- #
+
+try:
+    if not str(username) and str(userpassword):
+        sys.exit("Undefined username/userpassword under CONFIG")
+except:
+    sys.exit("Error reading CONFIG for KissDownloader.py")
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1,100000))
@@ -38,6 +41,8 @@ queue = Queue.Queue()
 start = time.time()
 count = 0
 downloading = 0
+complete_dir = "" # Developer
+prefix = "" # Developer
 
 class KissDownloader(threading.Thread):
     def __init__(self, params, queue):
@@ -102,18 +107,23 @@ class KissDownloader(threading.Thread):
             time.sleep(random.randint(1,2))
 
         print("Login...  (5 second cloudflare check)")
-        self.driver.get(str(site) + "/Login")
-        time.sleep(7)
-        self.driver.implicitly_wait(40)
-        username = self.driver.find_element_by_id("username")
-        password = self.driver.find_element_by_id("password")
-        username.send_keys(user)
-        password.send_keys(pw)
-        time.sleep(1)
-        # send the filled out login form and wait
-        password.send_keys(Keys.RETURN)
-        time.sleep(5)
-
+        try:
+            self.driver.get(str(site) + "/Login")
+            time.sleep(5)
+            self.driver.implicitly_wait(50)
+        except:
+            sys.exit("Login failed")
+        try:
+            time.sleep(1)
+            username = self.driver.find_element_by_id("username")
+            password = self.driver.find_element_by_id("password")
+            username.send_keys(user)
+            password.send_keys(pw)
+            # send the filled out login form and wait
+            password.send_keys(Keys.RETURN)
+            time.sleep(4)
+        except:
+            sys.exit("Login credential failed")
         #print(self.driver.current_url)
 
         if str(self.driver.current_url).lower() == site + "/login" or str(self.driver.current_url).lower() == site + "/login": # confirm login success, return bool
@@ -259,7 +269,7 @@ class KissDownloader(threading.Thread):
         episode_list = []
         file_list = []
         global prefix
-        global queue_limit
+        global download_threads
         ecount = 0
         if(int(p[5])>0):
             epcount = int(p[5])-1 # temp folder
@@ -288,19 +298,17 @@ class KissDownloader(threading.Thread):
                     epcount = p[5]
                 else:
                     epcount = int(max(file_list))+1
-        if(int(epcount) > int(retrieve_last)):
-            epcount = (int(epcount) - int(retrieve_last))
 
         if(p[4] and int(p[9])==0):
-            maxretrieve = int(p[4])+1
+            maxretrieve = int(p[4])+1 # +1 to handle 0 episodes
         elif(int(p[9])>0):
             maxretrieve = int(p[9])
 
         if(int(ecount) < maxretrieve):
+            extension = webdriver.ChromeOptions()
+            extension.add_extension(dir_path+"/extension/ublock_origin.crx")
+            extension.add_extension(dir_path+"/extension/image_block.crx")
             try:
-                extension = webdriver.ChromeOptions()
-                extension.add_extension("./extension/ublock_origin.crx")
-                extension.add_extension("./extension/image_block.crx")
                 self.driver = webdriver.Chrome(chrome_options = extension)
                 self.driver.set_page_load_timeout(40)
             except:
@@ -318,8 +326,8 @@ class KissDownloader(threading.Thread):
         self.rootPage = self.driver.page_source
         if (int(ecount) < (int(p[4])+1)):
             print("Retrieve from " + str(epcount) + " of " + str(p[4]))
-            for e in self.frange(float(epcount), maxretrieve, 1):
-                if(int(ecount) < int(queue_limit) and int(ecount) < maxretrieve):
+            for e in self.frange(float(epcount), int(maxretrieve), 1):
+                if(int(ecount) < int(download_threads)*3 and int(ecount) < int(maxretrieve)):
                     time.sleep(random.randint(1,3)) # longer delay lowers captcha risk
                     page = self.get_episode_page(e, p[8])
                     if page[0] == "":
@@ -353,10 +361,10 @@ class KissDownloader(threading.Thread):
                         else:
                             print("Retrieve failed [" + str(e) + "]")
                 else:
-                    print("Queue limit reached ("+str(queue_limit)+")")
+                    print("Queue limit reached ("+str(int(download_threads)*3)+")")
                     break
             else:
-                print("Retrieved episode limit ("+str(maxretrieve)+")")
+                print("Retrieved episode limit ("+str(int(maxretrieve)-1)+")")
 
         self.driver.close()
 
@@ -364,16 +372,19 @@ class KissDownloader(threading.Thread):
         last_count = 9001
         while(count > 0):
             time.sleep(1)
-            if(int(count) != int(last_count) or int(last_count) > 9000 and int(count) < int(download_threads)):
-                print("> " + str(count) + " remain")
-                last_count = count
+            if(int(count) != int(last_count) and int(count) < int(download_threads)):
+                if(int(last_count) > 9000):
+                    last_count = count
+                else:
+                    print("> " + str(count) + " remain")
+                    last_count = count
         #queue.join() # wait for queue to complete
 
         if(episode_list):
             os.rename( dir_path + "/temp/resolved"+randnum+".csv", dir_path + "/resolved.csv.trash")
             KissDownloader.init()
         else:
-            print("Download complete!")
+            print("Download finished!")
             if(complete_dir): # move *.mp4 to complete_dir
                 file_count = []
                 for infile in glob.glob(p[7]+"/*.mp4"):
@@ -450,16 +461,16 @@ class KissDownloader(threading.Thread):
             sys.exit("Critical error renaming title")
         print('Initiate... [' + str(title) + ']')
 
-        if not os.path.exists(destination + "/" + title):
-            os.mkdir(destination + "/" + title)
-        if not os.path.exists(destination + "/" + title + "/temp"):
-            os.mkdir(destination + "/" + title + "/temp")
+        if not os.path.exists(destination_folder + "/" + title):
+            os.mkdir(destination_folder + "/" + title)
+        if not os.path.exists(destination_folder + "/" + title + "/temp"):
+            os.mkdir(destination_folder + "/" + title + "/temp")
 
         website = '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))
         if website.endswith('/'):
             website = website[:-1]
 
-        return website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max,resolution
+        return website,username,userpassword,title,url,mal,episode_min,episode_count,destination_folder,episode_max,resolution
 
     def run_download(self):
         if self[8] == "":
@@ -467,11 +478,11 @@ class KissDownloader(threading.Thread):
                 os.mkdir(dir_path + "/downloads")
             destination = dir_path + "/downloads"
         else:
-            destination_folder = self[8].replace("\\", "/")
-            if destination_folder.endswith('/'):
-                destination = str(destination_folder) + str(self[3]) + "/"
+            destination_folderx = self[8].replace("\\", "/")
+            if destination_folderx.endswith('/'):
+                destination = str(destination_folderx) + str(self[3]) + "/"
             else:
-                destination = str(destination_folder) + "/" + str(self[3]) + "/"
+                destination = str(destination_folderx) + "/" + str(self[3]) + "/"
         params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9], self[10]]
         #print(params)
         KissDownloader(params, queue)
@@ -487,9 +498,9 @@ class KissDownloader(threading.Thread):
             print("Please check your network connection!")
             sys.exit(0)
 
-        # 0 website, 1 user_name,2 user_password, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
-        website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max, resolution = KissDownloader.read_config()
-        KissDownloader.run_download([website,user_name,user_password,title,url,mal,episode_min,episode_count,destination,episode_max,resolution])
+        # 0 website, 1 username,2 userpassword, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
+        website,username,userpassword,title,url,mal,episode_min,episode_count,destination_folder,episode_max, resolution = KissDownloader.read_config()
+        KissDownloader.run_download([website,username,userpassword,title,url,mal,episode_min,episode_count,destination_folder,episode_max,resolution])
         episodes_list = []
         for tup in episodes_list:
             url = tup[0]
