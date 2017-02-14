@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import urllib, csv, re, socket, requests, sys, os, time, glob, shutil, random, threading, youtube_dl
+import urllib, csv, re, socket, requests, sys, os, time, glob, shutil, random, threading, youtube_dl, settings
 import urllib.request as urllib2
 import queue as Queue
 import tqdm as tqdm
@@ -18,15 +18,6 @@ from selenium.webdriver.common.keys import Keys
 # TODO Fix download bar (previously working)
 # TODO Add support for movies/episodes not following the standard naming schema
 # TODO Retrieve until queue_limit is reached, across multiple series. Require rework to handle managing multiple series at once.
-
-# ----  CONFIG START ---- #
-
-username = "" # Required
-userpassword = "" # Required
-destination_folder = "" # Optional
-download_threads = 8 # Asynchronous downloads count [recommended 4-16]
-
-# ----  CONFIG END ---- #
 
 try:
     if not str(username) and str(userpassword):
