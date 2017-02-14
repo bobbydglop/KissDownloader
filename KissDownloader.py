@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import urllib, csv, re, socket, requests, sys, os, time, glob, shutil, random, threading, youtube_dl, settings
+import urllib, csv, re, socket, requests, sys, os, time, glob, shutil, random, threading, youtube_dl
+from settings import *
 import urllib.request as urllib2
 import queue as Queue
 import tqdm as tqdm
@@ -103,7 +104,7 @@ class KissDownloader(threading.Thread):
             self.driver.implicitly_wait(30)
             self.driver.execute_script("window.stop()")
         except:
-            print("Login failed")
+            print("Login failed (check your credentials)")
             return False
         try:
             time.sleep(3)
