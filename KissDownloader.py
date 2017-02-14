@@ -46,47 +46,51 @@ class KissDownloader(threading.Thread):
             self.queue = queue
 
     def run(self):
-      global count
-      downloaded = 0
-      while True:
-        host = self.queue.get()
-        nestlist = [x for x in episode_list if host in x[0]]
+        global count
+        downloaded = 0
+        while True:
+            host = self.queue.get()
+            nestlist = [x for x in episode_list if host in x[0]]
 
-        try:
-            if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
-                print("File exists " + nestlist[0][1] + "...")
-            else:
-                try:
-                    print("Download " + nestlist[0][3] + "...")
-                    count = count + 1
-                    urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-                    print("Completed " + nestlist[0][3] + "!")
-                    downloaded = 1
-                    count = count - 1
-                except:
+            try:
+                if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
+                    print("File exists " + nestlist[0][1] + "...")
+                elif not nestlist:
+                    print("Unable to read download")
+                elif not host:
+                    print("Unable to read download host")
+                else:
                     try:
-                        print("Retry episode " + nestlist[0][3])
-                        urlretrieve(host, nestlist[0][2] + "temp/" + nestlist[0][1])
-                        print("Completed episode " + nestlist[0][3])
+                        print("Download " + nestlist[0][3] + "...")
+                        count = count + 1
+                        urlretrieve(str(host), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
+                        print("Completed " + nestlist[0][3] + "!")
                         downloaded = 1
                         count = count - 1
                     except:
-                        print("Episode " + nestlist[0][3] + " failed")
-                        count = count - 1
-        except:
-            try:
-                print("Error downloading episode " + nestlist[0][3])
+                        try:
+                            print("Retry episode " + nestlist[0][3])
+                            urlretrieve(str(host), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
+                            print("Completed episode " + nestlist[0][3])
+                            downloaded = 1
+                            count = count - 1
+                        except:
+                            print("Episode " + nestlist[0][3] + " failed")
+                            count = count - 1
             except:
-                print("Spreadsheet error")
-        try:
-            if(downloaded == 1):
-                shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
-        except:
-            print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+                try:
+                    print("Error downloading episode " + nestlist[0][3])
+                except:
+                    print("Spreadsheet error")
+            try:
+                if(downloaded == 1):
+                    shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+            except:
+                print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-        #total = tqdm.tqdm(count)
-        #total.update(1)
-        self.queue.task_done()
+            #total = tqdm.tqdm(count)
+            #total.update(1)
+            self.queue.task_done()
 
     def login(self, user, pw, site):
         status = ""
@@ -104,7 +108,8 @@ class KissDownloader(threading.Thread):
             self.driver.implicitly_wait(30)
             self.driver.execute_script("window.stop()")
         except:
-            print("Login failed (check your credentials)")
+            print("Critical error: login failed")
+            time.sleep(4)
             return False
         try:
             time.sleep(3)
@@ -116,7 +121,9 @@ class KissDownloader(threading.Thread):
             password.send_keys(Keys.RETURN)
             time.sleep(4)
         except:
-            print("Login credential failed")
+            print("Login credential failed:")
+            print(str(user) + " - " + str(pw))
+            time.sleep(4)
             return False
         #print(self.driver.current_url)
 
@@ -329,6 +336,7 @@ class KissDownloader(threading.Thread):
 
         if (int(ecount) < (int(p[4])+1)):
             print("Retrieve from " + str(epcount) + " of " + str(p[4]))
+
             for e in self.frange(float(epcount), int(maxretrieve), 1):
                 if(int(ecount) < int(download_threads)*3 and int(ecount) < int(maxretrieve)):
                     time.sleep(random.randint(2,4))
@@ -435,7 +443,11 @@ class KissDownloader(threading.Thread):
                         episode_count = row[2]
                         mal = row[3]
                         episode_min = row[4]
+                        if(int(row[4])):
+                            print("Minimum episode set to " + str(row[5]))
                         episode_max = row[5]
+                        if(int(row[5])):
+                            print("Maximum episode set to " + str(row[5]))
                         if(int(row[6]) >= 0 and int(row[6]) <= 1080):
                             if(int(row[6]) >= 360):
                                 print("Resolution limited to " + str(row[6]) + "p")
