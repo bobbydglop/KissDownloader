@@ -168,8 +168,7 @@ class KissDownloader(threading.Thread):
                                 episodexx = item
                             if animetitle[0] + "-" in episodexx:
                                 episodex = episodexx.replace(animetitle[0] + "-", "")
-                                if self.debug_mode:
-                                    print("found [" + episodex + "]")
+                                #print("found [" + episodex + "]")
                                 episodex = episodex.split("-")[0]
                         try:
                             if float(episodex) == float(episode) and float(episode) != 0:
@@ -202,7 +201,7 @@ class KissDownloader(threading.Thread):
         currentpage = self.driver.page_source
         soup = BeautifulSoup(currentpage, 'html.parser')
 
-        time.sleep(1)
+        time.sleep(1) # wait for render
 
         try:
             resolution = int(resolution)
@@ -338,8 +337,10 @@ class KissDownloader(threading.Thread):
                         pass
                     else:
                         video = self.get_video_src(page[0], p[10])
+                        KA = ""
                         if prefix:
                             prefix2 = p[6] + prefix
+                            KA = "_KA"
                         else:
                             prefix2 = ""
                         if (video[0] != 'false'):
@@ -354,9 +355,9 @@ class KissDownloader(threading.Thread):
                             if(number5 == 4 and "-" in varxx[-5:]):
                                 e = str("00" + varxx[-5:])
                             if page[1]:  # uncensored
-                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] +"_BD_KA" + video[1]
+                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] +"_BD" + KA + video[1]
                             else:
-                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] + "_KA" + video[1]
+                                filename = prefix2 + p[2] + "_-_" + e + "_" + video[2] + KA + video[1]
                             episode_list.append((video[0], filename, p[7], e))
                             ecount = ecount + 1
                             print("Resolved [" + str(filename) + "]")
@@ -450,13 +451,11 @@ class KissDownloader(threading.Thread):
                 print("EndIndex")
             except Exception:
                 print("Exception")
-        '''
-        writer.writerows([newrow])
-        '''
+        #writer.writerows([newrow])
 
         newfile.close()
         try:
-            for k, v in {'&&':'', '&':'_and_', "'s":'s'}.items():
+            for k, v in {'&&':'', '&':'_and_', "'s":'s'}.items(): # replace
                 title = title.replace(k, v)
             title = re.sub(r'[^a-zA-Z0-9\[\]]','_', title) # alphanumeric only
             title = re.sub('_+', '_', title) # replace multiple _
@@ -483,9 +482,8 @@ class KissDownloader(threading.Thread):
             destination = dir_path + "/downloads"
         else:
             destination_folderx = self[8].replace("\\", "/")
-            if destination_folderx.endswith('/'):
-                destination = str(destination_folderx) + str(self[3]) + "/"
-            else:
+            destination = str(destination_folderx) + str(self[3]) + "/"
+            if not destination_folderx.endswith('/'):
                 destination = str(destination_folderx) + "/" + str(self[3]) + "/"
         params = [self[1], self[2], self[3], self[4], self[5], self[6], self[7], destination, self[0], self[9], self[10]]
         #print(params)
@@ -493,11 +491,10 @@ class KissDownloader(threading.Thread):
 
     def init():
 
-        try:
+        try: # check network connection
             socket.create_connection(("www.google.com", 80))
         except OSError:
-            print("Please check your network connection!")
-            sys.exit(0)
+            sys.exit("Unable to connect to network :(")
 
         # 0 website, 1 username,2 userpassword, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
         website,username,userpassword,title,url,mal,episode_min,episode_count,destination_folder,episode_max, resolution = KissDownloader.read_config()
