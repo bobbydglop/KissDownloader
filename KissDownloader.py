@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-import urllib, csv, re, shutil,fnmatch, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
-from threading import Thread, Lock
-from urllib.request import urlretrieve
-from urllib.parse import urlparse
+import urllib, csv, re, socket, requests, sys, os, time, glob, shutil, random, threading, youtube_dl
 import urllib.request as urllib2
 import queue as Queue
 import tqdm as tqdm
+from threading import Thread, Lock
+from urllib.request import urlretrieve
+from urllib.parse import urlparse
 from pathlib import Path
 from bs4 import BeautifulSoup
-from tempfile import NamedTemporaryFile
 from random import randint
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -116,9 +115,6 @@ class KissDownloader(threading.Thread):
             print("Login failed")
             return False
         try:
-            # please note chrome bug https://bugs.chromium.org/p/chromedriver/issues/detail?id=1224
-            # regarding error "cannot determine loading status" this had not been fixed for 2 years
-            # this occurs from a timeout, and breaks when unable to find input box, currently no solution
             time.sleep(3)
             username = self.driver.find_element_by_id("username")
             password = self.driver.find_element_by_id("password")
@@ -237,6 +233,7 @@ class KissDownloader(threading.Thread):
             threesixty = pattern = re.compile(r'x360.mp4')
             for link in soup.findAll('a', text=threesixty):
                 return [link.get('href'), ".mp4", "360p"]
+        # fallback for other resolution
         if(resolution >= 0):
             finalcheck = pattern = re.compile(r'.mp4')
             for link in soup.findAll('a', text=finalcheck):
@@ -244,7 +241,8 @@ class KissDownloader(threading.Thread):
                 if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
                     return [link.get('href'), ".mp4", resolutionr+"p"]
 
-        for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload
+        # openload
+        for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"):
             ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
             with ydl:
                 result = ydl.extract_info(link.get('href'),download=False) # extract info
@@ -282,8 +280,8 @@ class KissDownloader(threading.Thread):
         else:
             epcount = 0
 
-        if(downloading == 0): # start downloader, wait for files
-            for i in range(int(download_threads)):
+        if(downloading == 0):
+            for i in range(int(download_threads)): # start downloader, wait for files
                 downloading = 1
                 params=""
                 t = KissDownloader(params, queue)
@@ -331,17 +329,18 @@ class KissDownloader(threading.Thread):
         while k:
             try:
                 self.driver.get(p[3])
+                time.sleep(2)
+                self.rootPage = self.driver.page_source
+                k = False
             except:
+                time.sleep(2)
                 print("Error loading page")
-            time.sleep(2)
-            self.rootPage = self.driver.page_source
-            k = False
 
         if (int(ecount) < (int(p[4])+1)):
             print("Retrieve from " + str(epcount) + " of " + str(p[4]))
             for e in self.frange(float(epcount), int(maxretrieve), 1):
                 if(int(ecount) < int(download_threads)*3 and int(ecount) < int(maxretrieve)):
-                    time.sleep(random.randint(1,3)) # longer delay lowers captcha risk
+                    time.sleep(random.randint(2,4))
                     page = self.get_episode_page(e, p[8])
                     if page[0] == "":
                         pass
@@ -502,12 +501,9 @@ class KissDownloader(threading.Thread):
 
     def init():
 
-        try: # Test network connection before processing
-            url = "http://google.com"
-            print("Sending request to {}".format(url))
-            response = urllib2.urlopen(url, timeout=5)
-            print("Connected!")
-        except:
+        try:
+            socket.create_connection(("www.google.com", 80))
+        except OSError:
             print("Please check your network connection!")
             sys.exit(0)
 
