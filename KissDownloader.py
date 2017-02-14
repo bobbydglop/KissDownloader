@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import urllib, scrapy, csv, re, shutil,fnmatch, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
+import urllib, csv, re, shutil,fnmatch, cfscrape, requests, sys, os, time, pip, glob, shutil, webbrowser, random, threading, time, youtube_dl
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -15,10 +15,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-# TODO GUI to manage insertion of new entries, display console output, start/stop button
-# TODO Fix download bar
-# TODO Add support for movies and files not following the standard naming schema
-# TODO Handle queueing multiple entries to fill download_threads
+# TODO Fix GUI not closing when click start download
+# TODO Fix download bar (previously working)
+# TODO Add support for movies/episodes not following the standard naming schema
+# TODO Retrieve until queue_limit is reached, across multiple series. Require rework to handle managing multiple series at once.
 
 # ----  CONFIG START ---- #
 
@@ -109,12 +109,17 @@ class KissDownloader(threading.Thread):
         print("Login...  (5 second cloudflare check)")
         try:
             self.driver.get(str(site) + "/Login")
-            time.sleep(5)
-            self.driver.implicitly_wait(50)
+            time.sleep(10)
+            self.driver.implicitly_wait(30)
+            self.driver.execute_script("window.stop()")
         except:
-            sys.exit("Login failed")
+            print("Login failed")
+            return False
         try:
-            time.sleep(1)
+            # please note chrome bug https://bugs.chromium.org/p/chromedriver/issues/detail?id=1224
+            # regarding error "cannot determine loading status" this had not been fixed for 2 years
+            # this occurs from a timeout, and breaks when unable to find input box, currently no solution
+            time.sleep(3)
             username = self.driver.find_element_by_id("username")
             password = self.driver.find_element_by_id("password")
             username.send_keys(user)
@@ -123,7 +128,8 @@ class KissDownloader(threading.Thread):
             password.send_keys(Keys.RETURN)
             time.sleep(4)
         except:
-            sys.exit("Login credential failed")
+            print("Login credential failed")
+            return False
         #print(self.driver.current_url)
 
         if str(self.driver.current_url).lower() == site + "/login" or str(self.driver.current_url).lower() == site + "/login": # confirm login success, return bool
@@ -306,11 +312,12 @@ class KissDownloader(threading.Thread):
 
         if(int(ecount) < maxretrieve):
             extension = webdriver.ChromeOptions()
+            extension.add_argument('--dns-prefetch-disable')
             extension.add_extension(dir_path+"/extension/ublock_origin.crx")
             extension.add_extension(dir_path+"/extension/image_block.crx")
             try:
                 self.driver = webdriver.Chrome(chrome_options = extension)
-                self.driver.set_page_load_timeout(40)
+                self.driver.set_page_load_timeout(50)
             except:
                 sys.exit("Chrome failed to load")
             try:
@@ -320,10 +327,16 @@ class KissDownloader(threading.Thread):
                     l = self.login(p[0], p[1], p[8])
             except:
                 sys.exit("Login failed")
+        k = True
+        while k:
+            try:
+                self.driver.get(p[3])
+            except:
+                print("Error loading page")
+            time.sleep(2)
+            self.rootPage = self.driver.page_source
+            k = False
 
-        self.driver.get(p[3])
-        time.sleep(3)
-        self.rootPage = self.driver.page_source
         if (int(ecount) < (int(p[4])+1)):
             print("Retrieve from " + str(epcount) + " of " + str(p[4]))
             for e in self.frange(float(epcount), int(maxretrieve), 1):

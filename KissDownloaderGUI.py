@@ -2,6 +2,8 @@ from KissDownloader import *
 from tkinter import *
 from tkinter.ttk import *
 
+print("Ensure download script is not running!")
+
 # ----  CONFIG START ---- #
 
 demo_data = 1 # Display sample data in insert form [set to 0 to disable]
@@ -95,7 +97,7 @@ class App(Frame):
                     print(checkint + " must be number!")
                     valid = 1
             if(valid == 0):
-                with open(dir_path+'/resolved.csv', 'a') as csvfile:
+                with open('/home/onevoltten/KissDownloader/resolved.csv', 'a') as csvfile:
                     thewriter = csv.writer(csvfile, delimiter=',')
                     params = [str(self.title.get()), str(self.url.get()), '0', str(self.episode_count.get()), str(self.episode_min.get()), str(self.episode_max.get()), str(self.quality_select.get()[:-1])]
                     thewriter.writerow(params)
