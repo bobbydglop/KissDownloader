@@ -29,6 +29,7 @@ from selenium.webdriver.common.keys import Keys
 
 # TODO Fix GUI not closing when click start download
 # TODO Fix download bar (previously working)
+# TODO Fix login loop
 # TODO Add support for movies/episodes not following the standard naming schema
 # TODO Retrieve until queue_limit is reached, across multiple series.
 # Require rework to handle managing multiple series at once.
@@ -66,43 +67,41 @@ class KissDownloader(threading.Thread):
         while True:
             host = self.queue.get()
             nestlist = [x for x in episode_list if host in x[0]]
-
-            try:
-                if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
-                    print("File exists " + nestlist[0][1] + "...")
-                else:
-                    try:
-                        print("Download " + nestlist[0][3] + "...")
-                        count = count + 1
-                        urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
-                        print("Completed " + nestlist[0][3] + "!")
-                        downloaded = 1
-                        count = count - 1
-                    except:
+            if(nestlist):
+                count = count + 1
+                try:
+                    if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
+                        print("File exists " + nestlist[0][1] + "...")
+                    else:
                         try:
-                            print("Download retry " + nestlist[0][3] + "...")
-                            count = count + 1
+                            print("Download " + nestlist[0][3] + "...")
                             urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
                             print("Completed " + nestlist[0][3] + "!")
                             downloaded = 1
-                            count = count - 1
                         except:
-                            print("Download failed " + nestlist[0][3])
-            except:
-                try:
-                    print("Error downloading episode " + nestlist[0][3])
+                            try:
+                                print("Download retry " + nestlist[0][3] + "...")
+                                urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
+                                print("Completed " + nestlist[0][3] + "!")
+                                downloaded = 1
+                            except:
+                                print("Download failed " + nestlist[0][3])
                 except:
-                    print("Spreadsheet error")
-            try:
-                if(downloaded == 1):
-                    shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
-            except:
-                print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[
-                      0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+                    try:
+                        print("Error downloading episode " + nestlist[0][3])
+                    except:
+                        print("Spreadsheet error")
+                count = count - 1
+                try:
+                    if(downloaded == 1):
+                        shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+                except:
+                    print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[
+                          0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-            # total = tqdm.tqdm(count)
-            # total.update(1)
-            self.queue.task_done()
+                # total = tqdm.tqdm(count)
+                # total.update(1)
+                self.queue.task_done()
 
     def login(self, user, pw, site):
         status=""
@@ -111,30 +110,29 @@ class KissDownloader(threading.Thread):
             status=req.status_code
             print("status code: " + str(req.status_code))
             return status
-            time.sleep(random.randint(1, 2))
+            time.sleep(2)
 
         print("Login...  (5 second cloudflare check)")
         try:
             self.driver.get(str(site) + "/Login")
-            time.sleep(10)
+            time.sleep(5)
             self.driver.implicitly_wait(30)
             self.driver.execute_script("window.stop()")
+            time.sleep(2)
+            try:
+                username=self.driver.find_element_by_id("username")
+                password=self.driver.find_element_by_id("password")
+                username.send_keys(user)
+                password.send_keys(pw)
+                # send the filled out login form and wait
+                password.send_keys(Keys.RETURN)
+                time.sleep(2)
+            except:
+                print("Login failed (critical)")
+                time.sleep(2)
+                return False
         except:
             print("Critical error: login failed")
-            time.sleep(4)
-            return False
-        try:
-            time.sleep(3)
-            username=self.driver.find_element_by_id("username")
-            password=self.driver.find_element_by_id("password")
-            username.send_keys(user)
-            password.send_keys(pw)
-            # send the filled out login form and wait
-            password.send_keys(Keys.RETURN)
-            time.sleep(4)
-        except:
-            print("Login credential failed:")
-            print(str(user) + " - " + str(pw))
             time.sleep(4)
             return False
         # print(self.driver.current_url)
@@ -163,9 +161,22 @@ class KissDownloader(threading.Thread):
                 currentlink=link.get('href')
                 if currentlink is None:
                     pass
-                else:
-                    if "episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower():
-                        return [site + "" + currentlink.lower(), False]
+                elif("episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower()):
+                    return [site + "" + currentlink.lower(), False]
+                elif "ova-" + str(episode).zfill(3) in currentlink.lower() or "ova-" + str(episode).zfill(2) in currentlink.lower():
+                    try:
+                        ovaep=str(currentlink).lower().split("ova-", 1)
+                        ovaep=ovaep[1]
+                        if(int(ovaep[:3])):
+                            ovaep=ovaep[:3]
+                        elif(int(ovaep[:2])):
+                            ovaep=ovaep[:2]
+                        if(int(episode) == int(ovaep)):
+                            return [site + "" + currentlink.lower(), False]
+                    except NameError:
+                        print("OVA lookup failed")
+                    except:
+                        print("OVA error")
             # weird urls
             for link in soup.findAll('a'):
                 currentlink=link.get('href')
@@ -429,7 +440,7 @@ class KissDownloader(threading.Thread):
                 for infile in glob.glob(p[7] + "/*.mp4"):
                     file_count.append(infile)
                 print(str(len(file_count)) + "/" + str(p[4]))
-                if(len(file_count) >= int(p[4])):
+                if(len(file_count) >= int(p[4])-1):
                     try:
                         finaldestination=destination + "/" + p[2]
                         for files in os.listdir(finaldestination):
@@ -445,7 +456,12 @@ class KissDownloader(threading.Thread):
                         print("Files move failed")
 
                 else:
-                    print("Invalid filecount!")
+                    if(len(file_count) <= 1):
+                        print("Download failed!")
+                        os.rmdir(finaldestination + "/temp")
+                        os.rmdir(finaldestination)
+                    else:
+                        print("Invalid filecount!")
 
             os.remove(dir_path + "/resolved.csv")
             os.rename(dir_path + "/temp/resolved" + randnum + \
@@ -482,8 +498,7 @@ class KissDownloader(threading.Thread):
                                       str(row[6]) + "p")
                             resolution=row[6]
                         else:
-                            sys.exit(
-                                "Column 6 resolution out of bounds ['360','480','720','1080']")
+                            sys.exit("Column 6 resolution out of bounds ['360','480','720','1080']")
                         br=1
                         newrow=[row[0], row[1], row[2], row[
                             3], row[4], row[5], row[6], 1]
@@ -531,7 +546,6 @@ class KissDownloader(threading.Thread):
             destination=str(destination_folderx) + str(self[3]) + "/"
             if not destination_folderx.endswith('/'):
                 destination=str(destination_folderx) + "/" + str(self[3]) + "/"
-            print(destination)
         params=[self[1], self[2], self[3], self[4], self[5], self[
             6], self[7], destination, self[0], self[9], self[10]]
         # print(params)
@@ -548,8 +562,7 @@ class KissDownloader(threading.Thread):
         # episode_min, 7 episode_count, 8 destination, 9 episode_max, 10
         # resolution
         website, username, userpassword, title, url, mal, episode_min, episode_count, destination_folder, episode_max, resolution=KissDownloader.read_config()
-        KissDownloader.run_download([website, username, userpassword, title, url, mal,
-                                    episode_min, episode_count, destination_folder, episode_max, resolution])
+        KissDownloader.run_download([website, username, userpassword, title, url, mal, episode_min, episode_count, destination_folder, episode_max, resolution])
         episodes_list=[]
         for tup in episodes_list:
             url=tup[0]
