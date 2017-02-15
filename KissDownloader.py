@@ -167,9 +167,9 @@ class KissDownloader(threading.Thread):
                     try:
                         ovaep=str(currentlink).lower().split("ova-", 1)
                         ovaep=ovaep[1]
-                        if(int(ovaep[:3])):
+                        if(ovaep[:3].isdigit()):
                             ovaep=ovaep[:3]
-                        elif(int(ovaep[:2])):
+                        elif(ovaep[:2].isdigit()):
                             ovaep=ovaep[:2]
                         if(int(episode) == int(ovaep)):
                             return [site + "" + currentlink.lower(), False]
@@ -318,13 +318,16 @@ class KissDownloader(threading.Thread):
             infile=infile.replace(p[7], "")
             infile=re.sub(r'.*_-_', '', infile)
             infile=infile[:3]
-            if(int(infile)):
+            if(infile.find('-')):
+                infile=infile.replace("-","")
+                file_list.append(int(infile))
+                file_list.append(int(infile)+1)
+            elif(int(infile)):
                 file_list.append(int(infile))
         if file_list:
             if(int(max(file_list))):
                 if(len(file_list) < int(max(file_list)) and p[5] == 0):
-                    print("Downloaded episode " + str(max(file_list)) + \
-                          ", filecount " + str(len(file_list)))
+                    print("Downloaded episode " + str(max(file_list)) + ", filecount " + str(len(file_list)))
                     print("Recheck from 0")
                     epcount=p[5]
                 else:
@@ -387,10 +390,10 @@ class KissDownloader(threading.Thread):
                             varxx=page[0].split('?id=', 1)[0]
                             number7=sum(c.isdigit() for c in varxx[-7:])
                             if(number7 == 6 and "-" in varxx[-7:]):
-                                e=str("00" + varxx[-7:])
+                                e=str(varxx[-7:]).zfill(2)
                             number5=sum(c.isdigit() for c in varxx[-5:])
                             if(number5 == 4 and "-" in varxx[-5:]):
-                                e=str("00" + varxx[-5:])
+                                e=str(varxx[-5:]).zfill(2)
                             if page[1]:  # uncensored
                                 filename=prefix2 + \
                                     p[2] + "_-_" + e + "_" + \
@@ -435,6 +438,8 @@ class KissDownloader(threading.Thread):
             KissDownloader.init()
         else:
             print("Download finished!")
+            global complete_dir
+            finaldestination=p[7] + "/" + p[2]
             if(complete_dir):  # move *.mp4 to complete_dir
                 file_count=[]
                 for infile in glob.glob(p[7] + "/*.mp4"):
@@ -442,19 +447,16 @@ class KissDownloader(threading.Thread):
                 print(str(len(file_count)) + "/" + str(p[4]))
                 if(len(file_count) >= int(p[4])-1):
                     try:
-                        finaldestination=destination + "/" + p[2]
                         for files in os.listdir(finaldestination):
                             if files.endswith('.mp4'):
-                                shutil.move(os.path.join(
-                                    finaldestination, files), os.path.join(complete_dir, files))
-                        try:
-                            os.rmdir(finaldestination + "/temp")
-                            os.rmdir(finaldestination)
-                        except:
-                            print("Folder delete failed")
+                                shutil.move(os.path.join(finaldestination, files), os.path.join(complete_dir, files))
                     except:
                         print("Files move failed")
-
+                    try:
+                        os.rmdir(finaldestination + "/temp")
+                        os.rmdir(finaldestination)
+                    except:
+                        print("Folder delete failed")
                 else:
                     if(len(file_count) <= 1):
                         print("Download failed!")
