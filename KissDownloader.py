@@ -307,8 +307,8 @@ class KissDownloader(threading.Thread):
             epcount=0
 
         if(downloading == 0):
+            downloading=1
             for i in range(int(download_threads)):  # start downloader, wait for files
-                downloading=1
                 params=""
                 t=KissDownloader(params, queue)
                 t.setDaemon(True)
@@ -439,19 +439,17 @@ class KissDownloader(threading.Thread):
         else:
             print("Download finished!")
             global complete_dir
-            finaldestination=p[7] + "/" + p[2]
+            finaldestination=p[7]
+            print(finaldestination)
             if(complete_dir):  # move *.mp4 to complete_dir
                 file_count=[]
                 for infile in glob.glob(p[7] + "/*.mp4"):
                     file_count.append(infile)
                 print(str(len(file_count)) + "/" + str(p[4]))
                 if(len(file_count) >= int(p[4])-1):
-                    try:
-                        for files in os.listdir(finaldestination):
-                            if files.endswith('.mp4'):
-                                shutil.move(os.path.join(finaldestination, files), os.path.join(complete_dir, files))
-                    except:
-                        print("Files move failed")
+                    for files in os.listdir(finaldestination):
+                        if files.endswith('.mp4'):
+                            shutil.move(os.path.join(finaldestination, files), os.path.join(complete_dir, files))
                     try:
                         os.rmdir(finaldestination + "/temp")
                         os.rmdir(finaldestination)
@@ -466,8 +464,8 @@ class KissDownloader(threading.Thread):
                         print("Invalid filecount!")
 
             os.remove(dir_path + "/resolved.csv")
-            os.rename(dir_path + "/temp/resolved" + randnum + \
-                      ".csv", dir_path + "/resolved.csv")
+            os.rename(dir_path + "/temp/resolved" + randnum + ".csv", dir_path + "/resolved.csv")
+
             KissDownloader.init()
 
     def read_config():
