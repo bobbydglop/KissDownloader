@@ -497,8 +497,7 @@ class KissDownloader(threading.Thread):
                         else:
                             sys.exit("Column 6 resolution out of bounds ['360','480','720','1080']")
                         br=1
-                        newrow=[row[0], row[1], row[2], row[
-                            3], row[4], row[5], row[6], 1]
+                        newrow=[row[0], row[1], row[2], row[3], row[4], row[5], row[6], 1]
                         pass
                     else:
                         writer.writerows([row])
@@ -520,7 +519,7 @@ class KissDownloader(threading.Thread):
         print('Initiate... [' + str(title) + ']')
 
         if not destination_folder.endswith('/'):
-            destination=str(destination_folder) + "/" + str(self[3]) + "/"
+            destination=str(destination_folder) + "/" + title + "/"
 
         if not os.path.exists(destination_folder + "/" + title):
             os.mkdir(destination_folder + "/" + title)
