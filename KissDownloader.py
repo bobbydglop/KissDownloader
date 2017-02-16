@@ -32,11 +32,10 @@ from selenium.webdriver.common.keys import Keys
 # TODO Add support for movies/episodes not following the standard naming schema
 # TODO Retrieve until queue_limit is reached, across multiple series.
 
-try:
-    if not str(username) and str(userpassword):
-        sys.exit("Undefined username/userpassword under CONFIG")
-except:
-    sys.exit("Error reading CONFIG for KissDownloader.py")
+if not str(username):
+    sys.exit("Undefined 'username' under CONFIG")
+if not str(userpassword):
+    sys.exit("Undefined 'userpassword' under CONFIG")
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1, 100000))
@@ -518,6 +517,11 @@ class KissDownloader(threading.Thread):
             sys.exit("Critical error renaming title")
         print('Initiate... [' + str(title) + ']')
 
+        global destination_folder
+
+        if not destination_folder:
+            destination_folder=str(dir_path)
+        
         if not destination_folder.endswith('/'):
             destination=str(destination_folder) + "/" + title + "/"
 
