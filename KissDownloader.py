@@ -12,10 +12,10 @@ import shutil
 import random
 import threading
 import youtube_dl
+import pySmartDL
 from settings import *
 import urllib.request as urllib2
 import queue as Queue
-#import tqdm as tqdm
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -41,11 +41,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 randnum = str(randint(1, 100000))
 queue = Queue.Queue()
 start = time.time()
-count = 0
+download_prog = 0
 downloading = 0
+count = 0
 complete_dir = ""  # Developer
 prefix = ""  # Developer
-
+default_data = ({})
 
 class KissDownloader(threading.Thread):
 
@@ -66,38 +67,63 @@ class KissDownloader(threading.Thread):
             nestlist = [x for x in episode_list if host in x[0]]
             if(nestlist):
                 count = count + 1
-                try:
-                    if(os.path.isfile(nestlist[0][2] + nestlist[0][1])):
-                        print("File exists " + nestlist[0][1] + "...")
-                    else:
+                if not os.path.isfile(nestlist[0][2] + nestlist[0][1]):
+                    print("Download " + nestlist[0][3] + "...")
+                    #urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
+
+                    filename = nestlist[0][1]
+                    path = nestlist[0][2] + "temp/" + filename
+                    obj = pySmartDL.SmartDL(str(host).replace(" ","%20"), nestlist[0][2] + "temp/" + nestlist[0][1], progress_bar=False, fix_urls=True)
+                    obj.start(blocking=False)
+                    location = obj.get_dest()
+
+                    while True:
+                        if obj.isFinished():
+                            break
+                        progress = obj.get_progress() * 100
+                        speed = obj.get_speed(human=False)
+                        if obj.get_eta() > 0 and progress < 100:
+                            console_output = str(filename + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% done at " + pySmartDL.utils.sizeof_human(speed) + "/s, ETA: "+ obj.get_eta(human=True))
+                            KissDownloader.download_progress(console_output, nestlist[0][3], 0) #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
+                        time.sleep(1)
+                        if progress == 100 and obj.get_eta() == 0:
+                            time.sleep(2)
+
+                    if obj.isFinished():
                         try:
-                            print("Download " + nestlist[0][3] + "...")
-                            #total.update(1)
-                            urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
-                            print("Completed " + nestlist[0][3] + "!")
-                            downloaded = 1
+                            KissDownloader.download_progress(console_output, nestlist[0][3], 1)
+                            if(downloaded == 1):
+                                shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
                         except:
-                            try:
-                                print("Download retry " + nestlist[0][3] + "...")
-                                urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
-                                print("Completed " + nestlist[0][3] + "!")
-                                downloaded = 1
-                            except:
-                                print("Download failed " + nestlist[0][3])
-                except:
-                    try:
-                        print("Error downloading episode " + nestlist[0][3])
-                    except:
-                        print("Spreadsheet error")
+                            print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+
+                    print("Completed " + nestlist[0][3] + "!")
                 count = count - 1
-                try:
-                    if(downloaded == 1):
-                        shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
-                except:
-                    print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[
-                          0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
                 self.queue.task_done()
+
+    def download_progress(output, dlid, delete):
+        global count
+        global default_data
+        global download_prog
+
+        if(delete == 0):
+            try: # set current data to array
+                default_data[dlid] = output
+            except KeyError:
+                default_data[dlid].append(output)
+        else:
+            del default_data[dlid]
+
+        if(download_prog == 0): # one instance per initiate
+            download_prog = 1
+            while count > 0:
+                #print(str(default_data)+"\n")
+                i = 0
+                for item in default_data:
+                    print(str(item), ':', default_data[item])
+                time.sleep(4)
+            download_prog = 0
 
     def login(self, user, pw, site):
         status=""
@@ -521,7 +547,7 @@ class KissDownloader(threading.Thread):
 
         if not destination_folder:
             destination_folder=str(dir_path)
-        
+
         if not destination_folder.endswith('/'):
             destination=str(destination_folder) + "/" + title + "/"
 
