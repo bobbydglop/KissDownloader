@@ -15,7 +15,7 @@ import youtube_dl
 from settings import *
 import urllib.request as urllib2
 import queue as Queue
-import tqdm as tqdm
+#import tqdm as tqdm
 from threading import Thread, Lock
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
@@ -29,10 +29,8 @@ from selenium.webdriver.common.keys import Keys
 
 # TODO Fix GUI not closing when click start download
 # TODO Fix download bar (previously working)
-# TODO Fix login loop
 # TODO Add support for movies/episodes not following the standard naming schema
 # TODO Retrieve until queue_limit is reached, across multiple series.
-# Require rework to handle managing multiple series at once.
 
 try:
     if not str(username) and str(userpassword):
@@ -75,6 +73,7 @@ class KissDownloader(threading.Thread):
                     else:
                         try:
                             print("Download " + nestlist[0][3] + "...")
+                            #total.update(1)
                             urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
                             print("Completed " + nestlist[0][3] + "!")
                             downloaded = 1
@@ -99,8 +98,6 @@ class KissDownloader(threading.Thread):
                     print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[
                           0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-                # total = tqdm.tqdm(count)
-                # total.update(1)
                 self.queue.task_done()
 
     def login(self, user, pw, site):
