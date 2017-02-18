@@ -1,5 +1,5 @@
 # KissBot
-Automatically download video from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. This build is designed to reliably mass download videos, this code has many improvements and fixes over the main release.<br>
+Automatically download video from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. Reliably mass download videos.<br>
 <br>
 Contact for support/troubleshooting https://discord.gg/W7uVTd7 (Username - Yubikiri).<br>
 <br>
