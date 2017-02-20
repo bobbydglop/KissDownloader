@@ -30,7 +30,7 @@ from selenium.webdriver.common.keys import Keys
 # TODO Fix GUI not closing when click start download
 # TODO Fix download bar (previously working)
 # TODO Add support for movies/episodes not following the standard naming schema
-# TODO Retrieve until queue_limit is reached, across multiple series.
+# TODO Retrieve until queue_limit is reached, across multiple series
 
 if not str(username):
     sys.exit("Undefined 'username' under CONFIG")
@@ -61,6 +61,7 @@ class KissDownloader(threading.Thread):
 
     def run(self):
         global count
+        global default_data
         downloaded = 0
         while True:
             host = self.queue.get()
@@ -84,14 +85,20 @@ class KissDownloader(threading.Thread):
                         speed = obj.get_speed(human=False)
                         if obj.get_eta() > 0 and progress < 100:
                             console_output = str(filename + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% done at " + pySmartDL.utils.sizeof_human(speed) + "/s, ETA: "+ obj.get_eta(human=True))
-                            KissDownloader.download_progress(console_output, nestlist[0][3], 0) #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
+                            #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
+                            try: # set current data to array
+                                default_data[nestlist[0][3]] = console_output
+                            except KeyError:
+                                default_data[nestlist[0][3]].append(console_output)
                         time.sleep(1)
                         if progress == 100 and obj.get_eta() == 0:
                             time.sleep(2)
-
                     if obj.isFinished():
                         try:
-                            KissDownloader.download_progress(console_output, nestlist[0][3], 1)
+                            del default_data[dlid]
+                        except KeyError:
+                            print("Error: unable to remove default_data[dlid]")
+                        try:
                             if(downloaded == 1):
                                 shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
                         except:
@@ -102,24 +109,14 @@ class KissDownloader(threading.Thread):
 
                 self.queue.task_done()
 
-    def download_progress(output, dlid, delete):
-        global count
-        global default_data
+    def download_message():
         global download_prog
-
-        if(delete == 0):
-            try: # set current data to array
-                default_data[dlid] = output
-            except KeyError:
-                default_data[dlid].append(output)
-        else:
-            del default_data[dlid]
-
+        global default_data
         if(download_prog == 0): # one instance per initiate
             download_prog = 1
+            #print(str(default_data)+"\n")
             while count > 0:
-                #print(str(default_data)+"\n")
-                i = 0
+                print("\u2500\u2500\u2500\u2500\u2500\u2500")
                 for item in default_data:
                     print(str(item), ':', default_data[item])
                 time.sleep(4)
@@ -446,6 +443,10 @@ class KissDownloader(threading.Thread):
         last_count=9001
         while(count > 0):
             time.sleep(1)
+            t=threading.Thread(target=KissDownloader.download_message())
+            t.daemon=True
+            t.start()
+
             if(int(count) != int(last_count) and int(count) < int(download_threads)):
                 if(int(last_count) > 9000):
                     last_count=count
