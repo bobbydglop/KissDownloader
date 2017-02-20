@@ -388,7 +388,7 @@ class KissDownloader(threading.Thread):
         if (int(ecount) < (int(p[4]) + 1)):
             print("Retrieve from " + str(epcount) + " of " + str(p[4]))
 
-            for e in self.frange(float(epcount), int(maxretrieve), 1):
+            for e in self.frange(float(epcount), int(maxretrieve), 0.5):
                 if(int(ecount) < int(download_threads) * 3 and int(ecount) < int(maxretrieve)):
                     time.sleep(random.randint(2, 4))
                     page=self.get_episode_page(e, p[8])
