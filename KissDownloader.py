@@ -181,8 +181,6 @@ class KissDownloader(threading.Thread):
         # censored vvv
         for link in soup.findAll('a'):
             currentlink=link.get('href')
-            print(currentlink)
-            print(episode)
             if currentlink is None:
                 pass
             elif "episode-" + episode.zfill(3) in currentlink.lower() or "episode-" + episode.zfill(2) in currentlink.lower():
@@ -232,7 +230,7 @@ class KissDownloader(threading.Thread):
                             episodex=episodex.split("-")[0]
                     try:
                         if float(episodex) == float(episode) and float(episode) != 0:
-                            #if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink: # needs testing before implement
+                            #if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink: # needs testing
                             return [site + "" + currentlink.lower(), False]
                         else:
                             pass
