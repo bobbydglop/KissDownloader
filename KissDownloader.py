@@ -165,77 +165,76 @@ class KissDownloader(threading.Thread):
     # parse video url, get episode page from list
     def get_episode_page(self, episode, site):
         soup=BeautifulSoup(self.rootPage, 'html.parser')
-        if episode % 1 == 0:
-            # for non special episodes
-            episode=int(episode)
-            # uncensored vvv
-            for link in soup.findAll('a'):
-                currentlink=link.get('href')
-                if currentlink is None:
-                    pass
-                elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(1) + "-uncen?" in currentlink.lower():
-                    return [site + "" + currentlink.lower(), True]
-                elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
-                    return [site + "" + currentlink.lower(), True]
-            # censored vvv
-            for link in soup.findAll('a'):
-                currentlink=link.get('href')
-                if currentlink is None:
-                    pass
-                elif("episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower()):
-                    return [site + "" + currentlink.lower(), False]
-                elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
-                    return [site + "" + currentlink.lower(), False]
-                elif "ova-" + str(episode).zfill(3) in currentlink.lower() or "ova-" + str(episode).zfill(2) in currentlink.lower():
+        # for non special episodes
+        episode=int(episode)
+        # uncensored vvv
+        for link in soup.findAll('a'):
+            currentlink=link.get('href')
+            if currentlink is None:
+                pass
+            elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(1) + "-uncen?" in currentlink.lower():
+                return [site + "" + currentlink.lower(), True]
+            elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
+                return [site + "" + currentlink.lower(), True]
+        # censored vvv
+        for link in soup.findAll('a'):
+            currentlink=link.get('href')
+            if currentlink is None:
+                pass
+            elif("episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower()):
+                return [site + "" + currentlink.lower(), False]
+            elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
+                return [site + "" + currentlink.lower(), False]
+            elif "ova-" + str(episode).zfill(3) in currentlink.lower() or "ova-" + str(episode).zfill(2) in currentlink.lower():
+                try:
+                    ovaep=str(currentlink).lower().split("ova-", 1)
+                    ovaep=ovaep[1]
+                    if(ovaep[:3].isdigit()):
+                        ovaep=ovaep[:3]
+                    elif(ovaep[:2].isdigit()):
+                        ovaep=ovaep[:2]
+                    if(int(episode) == int(ovaep)):
+                        return [site + "" + currentlink.lower(), False]
+                except NameError:
+                    print("OVA lookup failed")
+                except:
+                    print("OVA error")
+        # weird urls
+        for link in soup.findAll('a'):
+            currentlink=link.get('href')
+            if currentlink is None:
+                pass
+            elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
+                return [site + "" + currentlink.lower(), False]
+            elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
+                return [site + "" + currentlink.lower(), False]
+        # experimental urls
+        for link in soup.findAll('a'):
+            currentlink=link.get('href')
+            if(currentlink is None):
+                pass
+            else:
+                if("episode-" in link.get('href').lower()):
+                    currentlinkx=currentlink.lower()
+                    episodex=0
+                    if ("/anime/" in currentlinkx):
+                        currentlinkx=currentlinkx.replace("/anime/", "")
+                        animetitle=currentlinkx.split("/", 1)
+                        for item in animetitle:  # get last item
+                            episodexx=item
+                        if animetitle[0] + "-" in episodexx:
+                            episodex=episodexx.replace(
+                                animetitle[0] + "-", "")
+                            # print("found [" + episodex + "]")
+                            episodex=episodex.split("-")[0]
                     try:
-                        ovaep=str(currentlink).lower().split("ova-", 1)
-                        ovaep=ovaep[1]
-                        if(ovaep[:3].isdigit()):
-                            ovaep=ovaep[:3]
-                        elif(ovaep[:2].isdigit()):
-                            ovaep=ovaep[:2]
-                        if(int(episode) == int(ovaep)):
+                        if float(episodex) == float(episode) and float(episode) != 0:
                             return [site + "" + currentlink.lower(), False]
-                    except NameError:
-                        print("OVA lookup failed")
-                    except:
-                        print("OVA error")
-            # weird urls
-            for link in soup.findAll('a'):
-                currentlink=link.get('href')
-                if currentlink is None:
-                    pass
-                elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
-                    return [site + "" + currentlink.lower(), False]
-                elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
-                    return [site + "" + currentlink.lower(), False]
-            # experimental urls
-            for link in soup.findAll('a'):
-                currentlink=link.get('href')
-                if(currentlink is None):
-                    pass
-                else:
-                    if("episode-" in link.get('href').lower()):
-                        currentlinkx=currentlink.lower()
-                        episodex=0
-                        if ("/anime/" in currentlinkx):
-                            currentlinkx=currentlinkx.replace("/anime/", "")
-                            animetitle=currentlinkx.split("/", 1)
-                            for item in animetitle:  # get last item
-                                episodexx=item
-                            if animetitle[0] + "-" in episodexx:
-                                episodex=episodexx.replace(
-                                    animetitle[0] + "-", "")
-                                # print("found [" + episodex + "]")
-                                episodex=episodex.split("-")[0]
-                        try:
-                            if float(episodex) == float(episode) and float(episode) != 0:
-                                return [site + "" + currentlink.lower(), False]
-                            else:
-                                pass
-                        except ValueError:
+                        else:
                             pass
-            return ["", False]
+                    except ValueError:
+                        pass
+        return ["", False]
 
     # parse the video source link, retrieve highest available quality
     def get_video_src(self, episode_page, resolution):
