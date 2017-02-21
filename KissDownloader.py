@@ -69,7 +69,8 @@ class KissDownloader(threading.Thread):
             if(nestlist):
                 count = count + 1
                 if not os.path.isfile(nestlist[0][2] + nestlist[0][1]):
-                    print("Download " + nestlist[0][3] + "...")
+                    episode = str(nestlist[0][3])
+                    print("Download", episode, "...")
                     #urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
 
                     filename = nestlist[0][1]
@@ -87,7 +88,7 @@ class KissDownloader(threading.Thread):
                             console_output = str(filename + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% done at " + pySmartDL.utils.sizeof_human(speed) + "/s, ETA: "+ obj.get_eta(human=True))
                             #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
                             try: # set current data to array
-                                default_data[nestlist[0][3]] = console_output
+                                default_data[nestlist[0][3]]=console_output
                             except KeyError:
                                 default_data[nestlist[0][3]].append(console_output)
                         time.sleep(1)
@@ -104,7 +105,7 @@ class KissDownloader(threading.Thread):
                         except:
                             print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-                    print("Completed " + nestlist[0][3] + "!")
+                    print("Completed ", episode, "!")
                 count = count - 1
 
                 self.queue.task_done()
@@ -166,26 +167,28 @@ class KissDownloader(threading.Thread):
     def get_episode_page(self, episode, site):
         soup=BeautifulSoup(self.rootPage, 'html.parser')
         # for non special episodes
-        episode=int(episode)
+        init_episode=float(episode)
+        episode=str(init_episode).replace(".0","")
+        episode=str(episode).replace(".5","-5")
         # uncensored vvv
         for link in soup.findAll('a'):
             currentlink=link.get('href')
             if currentlink is None:
                 pass
-            elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(1) + "-uncen?" in currentlink.lower():
-                return [site + "" + currentlink.lower(), True]
-            elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
-                return [site + "" + currentlink.lower(), True]
+            elif "uncensored-episode-" + episode.zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + episode.zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + episode.zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + episode.zfill(2) + "?" in currentlink.lower() or "episode-" + episode.zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + episode.zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + episode.zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + episode.zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + episode.zfill(1) + "-uncen?" in currentlink.lower():
+                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
+                    return [site + "" + currentlink.lower(), True]
         # censored vvv
         for link in soup.findAll('a'):
             currentlink=link.get('href')
+            print(currentlink)
+            print(episode)
             if currentlink is None:
                 pass
-            elif("episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower()):
-                return [site + "" + currentlink.lower(), False]
-            elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
-                return [site + "" + currentlink.lower(), False]
-            elif "ova-" + str(episode).zfill(3) in currentlink.lower() or "ova-" + str(episode).zfill(2) in currentlink.lower():
+            elif "episode-" + episode.zfill(3) in currentlink.lower() or "episode-" + episode.zfill(2) in currentlink.lower():
+                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
+                    return [site + "" + currentlink.lower(), False]
+            elif "ova-" + episode.zfill(3) in currentlink.lower() + "?" or "ova-" + episode.zfill(2) + "?" in currentlink.lower():
                 try:
                     ovaep=str(currentlink).lower().split("ova-", 1)
                     ovaep=ovaep[1]
@@ -194,7 +197,8 @@ class KissDownloader(threading.Thread):
                     elif(ovaep[:2].isdigit()):
                         ovaep=ovaep[:2]
                     if(int(episode) == int(ovaep)):
-                        return [site + "" + currentlink.lower(), False]
+                        if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
+                            return [site + "" + currentlink.lower(), False]
                 except NameError:
                     print("OVA lookup failed")
                 except:
@@ -204,10 +208,9 @@ class KissDownloader(threading.Thread):
             currentlink=link.get('href')
             if currentlink is None:
                 pass
-            elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
-                return [site + "" + currentlink.lower(), False]
-            elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
-                return [site + "" + currentlink.lower(), False]
+            elif "episode-" + episode.zfill(3) + "-" in currentlink.lower() or "episode-" + episode.zfill(2) + "-" in currentlink.lower():
+                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
+                    return [site + "" + currentlink.lower(), False]
         # experimental urls
         for link in soup.findAll('a'):
             currentlink=link.get('href')
@@ -229,6 +232,7 @@ class KissDownloader(threading.Thread):
                             episodex=episodex.split("-")[0]
                     try:
                         if float(episodex) == float(episode) and float(episode) != 0:
+                            #if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink: # needs testing before implement
                             return [site + "" + currentlink.lower(), False]
                         else:
                             pass
@@ -419,13 +423,9 @@ class KissDownloader(threading.Thread):
                             if(number5 == 4 and "-" in varxx[-5:]):
                                 e=str(varxx[-5:]).zfill(2)
                             if page[1]:  # uncensored
-                                filename=prefix2 + \
-                                    p[2] + "_-_" + e + "_" + \
-                                        video[2] + "_BD" + KA + video[1]
+                                filename=prefix2 + p[2] + "_-_" + str(e) + "_" + video[2] + "_BD" + KA + video[1]
                             else:
-                                filename=prefix2 + \
-                                    p[2] + "_-_" + e + "_" + \
-                                        video[2] + KA + video[1]
+                                filename=prefix2 + p[2] + "_-_" + str(e) + "_" + video[2] + KA + video[1]
                             episode_list.append((video[0], filename, p[7], e))
                             ecount=ecount + 1
                             print("Resolved [" + str(filename) + "]")
@@ -514,9 +514,11 @@ class KissDownloader(threading.Thread):
                         url=row[1]
                         episode_count=row[2]
                         mal=row[3]
-                        episode_min=row[4]
-                        if(int(row[4])):
-                            print("Minimum episode set to " + str(row[5]))
+                        if(row[4]):
+                            episode_min=int(row[4])+1
+                            print("Minimum episode set to",episode_min-1)
+                        else:
+                            episode_min=row[4]
                         episode_max=row[5]
                         if(int(row[5])):
                             print("Maximum episode set to " + str(row[5]))
