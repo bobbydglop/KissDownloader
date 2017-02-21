@@ -70,7 +70,7 @@ class KissDownloader(threading.Thread):
                 count = count + 1
                 if not os.path.isfile(nestlist[0][2] + nestlist[0][1]):
                     episode = str(nestlist[0][3])
-                    print("Download", episode, "...")
+                    print("Download", episode)
                     #urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
 
                     filename = nestlist[0][1]
@@ -86,26 +86,25 @@ class KissDownloader(threading.Thread):
                         speed = obj.get_speed(human=False)
                         if obj.get_eta() > 0 and progress < 100:
                             console_output = str(filename + "\t " + str(float("{0:.2f}".format((float(obj.get_progress())*100)))) + "% done at " + pySmartDL.utils.sizeof_human(speed) + "/s, ETA: "+ obj.get_eta(human=True))
-                            #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
                             try: # set current data to array
                                 default_data[nestlist[0][3]]=console_output
-                            except KeyError:
+                            except KeyError: # initial set current data to array
                                 default_data[nestlist[0][3]].append(console_output)
+                            #print(console_output) #*epiode name* 0.38% done at 2.9 MB/s, ETA: 1 minutes, 12 seconds
                         time.sleep(1)
                         if progress == 100 and obj.get_eta() == 0:
                             time.sleep(2)
                     if obj.isFinished():
                         try:
-                            del default_data[dlid]
-                        except KeyError:
-                            print("Error: unable to remove default_data[dlid]")
+                            del default_data[nestlist[0][3]]
+                        except:
+                            print("Error: unable to remove", nestlist[0][3])
                         try:
-                            if(downloaded == 1):
-                                shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
+                            shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1])
                         except:
                             print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
 
-                    print("Completed ", episode, "!")
+                    print("Completed", episode)
                 count = count - 1
 
                 self.queue.task_done()
@@ -113,13 +112,15 @@ class KissDownloader(threading.Thread):
     def download_message():
         global download_prog
         global default_data
+        global count
         if(download_prog == 0): # one instance per initiate
             download_prog = 1
             #print(str(default_data)+"\n")
             while count > 0:
                 print("\u2500\u2500\u2500\u2500\u2500\u2500")
                 for item in default_data:
-                    print(str(item), ':', default_data[item])
+                    print(default_data[item])
+                    #print(str(item), ':', default_data[item])
                 time.sleep(4)
             download_prog = 0
 
@@ -345,9 +346,11 @@ class KissDownloader(threading.Thread):
             infile=re.sub(r'.*_-_', '', infile)
             infile=infile[:3]
             if(infile.find('-')):
-                infile=infile.replace("-","")
-                file_list.append(int(infile))
-                file_list.append(int(infile)+1)
+                infile=str(infile).replace("-","")
+                if(infile[-1:] == "."):
+                    infile=infile.replace(".","")
+                file_list.append(float(infile))
+                file_list.append(float(infile)+1)
             elif(int(infile)):
                 file_list.append(int(infile))
         if file_list:
