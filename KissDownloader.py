@@ -175,12 +175,16 @@ class KissDownloader(threading.Thread):
                     pass
                 elif "uncensored-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(1) + "-uncen?" in currentlink.lower():
                     return [site + "" + currentlink.lower(), True]
+                elif "uncensored-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncensored-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "uncen-episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncensored?" in currentlink.lower() or "episode-" + str(episode).zfill(3) + "-5-uncen?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5-uncen?" in currentlink.lower():
+                    return [site + "" + currentlink.lower(), True]
             # censored vvv
             for link in soup.findAll('a'):
                 currentlink=link.get('href')
                 if currentlink is None:
                     pass
                 elif("episode-" + str(episode).zfill(3) + "?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "?" in currentlink.lower()):
+                    return [site + "" + currentlink.lower(), False]
+                elif "episode-" + str(episode).zfill(3) + "-5?" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5?" in currentlink.lower():
                     return [site + "" + currentlink.lower(), False]
                 elif "ova-" + str(episode).zfill(3) in currentlink.lower() or "ova-" + str(episode).zfill(2) in currentlink.lower():
                     try:
@@ -202,6 +206,8 @@ class KissDownloader(threading.Thread):
                 if currentlink is None:
                     pass
                 elif "episode-" + str(episode).zfill(3) + "-" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-" in currentlink.lower():
+                    return [site + "" + currentlink.lower(), False]
+                elif "episode-" + str(episode).zfill(3) + "-5" in currentlink.lower() or "episode-" + str(episode).zfill(2) + "-5" in currentlink.lower():
                     return [site + "" + currentlink.lower(), False]
             # experimental urls
             for link in soup.findAll('a'):
