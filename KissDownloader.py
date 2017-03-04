@@ -368,7 +368,6 @@ class KissDownloader(threading.Thread):
             extension=webdriver.ChromeOptions()
             extension.add_argument('--dns-prefetch-disable')
             extension.add_extension(dir_path + "/extension/ublock_origin.crx")
-            extension.add_extension(dir_path + "/extension/image_block.crx")
             try:
                 self.driver=webdriver.Chrome(chrome_options=extension)
                 self.driver.set_page_load_timeout(50)
