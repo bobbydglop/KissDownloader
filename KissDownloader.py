@@ -199,7 +199,7 @@ class KissDownloader(threading.Thread):
             elif str(episode).zfill(3) + "?id=" in currentlink.lower() or str(episode).zfill(2) + "?id=" in currentlink.lower() or str(episode).zfill(1) + "?id=" in currentlink.lower():
                 episodexx = currentlink.split('?id=')[0]
                 episode_number = re.match('.*?([0-9]+)$', episodexx).group(1)
-                print(episode, episode_number)
+                #print(episode, episode_number)
                 if episode == episode_number:
                     #print("found",episode)
                     return [site + "" + currentlink.lower(), False]
