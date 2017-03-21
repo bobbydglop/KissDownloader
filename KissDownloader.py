@@ -28,14 +28,12 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
 # TODO Fix GUI not closing when click start download
-# TODO Fix download bar (previously working)
 # TODO Add support for movies/episodes not following the standard naming schema
-# TODO Retrieve until queue_limit is reached, across multiple series
 
 if not str(username):
-    sys.exit("Undefined 'username' under CONFIG")
+    sys.exit("Undefined 'username' in settings.py")
 if not str(userpassword):
-    sys.exit("Undefined 'userpassword' under CONFIG")
+    sys.exit("Undefined 'userpassword' in settings.py")
 
 dir_path=os.path.dirname(os.path.realpath(__file__))
 randnum=str(randint(1, 100000)) # used to create random filename, should be revised
@@ -192,7 +190,8 @@ class KissDownloader(threading.Thread):
 				or self.get_episode_regex('', episode, '?id=', currentlink.lower()):
                 return [site + "" + currentlink.lower(), False]
 
-        for link in soup.findAll('a'): # openload
+		# TODO revise to work with new logic
+        for link in soup.findAll('a'): # experimental
             currentlink=link.get('href')
             if(currentlink is None):
                 pass
@@ -212,7 +211,6 @@ class KissDownloader(threading.Thread):
                             episodex=episodex.split("-")[0]
                     try:
                         if float(episodex) == float(episode) and float(episode) != 0:
-                            #if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink: # needs testing
                             return [site + "" + currentlink.lower(), False]
                         else:
                             pass
@@ -349,7 +347,7 @@ class KissDownloader(threading.Thread):
         if(p[4] and int(p[9]) == 0):
             maxretrieve=int(p[4]) + 1
         elif(int(p[9]) > 0):
-            maxretrieve=int(p[9]) + 1 # TODO revise
+            maxretrieve=int(p[9]) + 1
 
         if(int(ecount) < maxretrieve):
             extension=webdriver.ChromeOptions()
@@ -443,7 +441,7 @@ class KissDownloader(threading.Thread):
                         last_count=count
 		
         except KeyboardInterrupt:
-            sys.exit("interrupt")
+            os.exit("interrupt")
         except:
             print("Error: download_message init failed")
 
@@ -503,7 +501,7 @@ class KissDownloader(threading.Thread):
                         mal=row[3]
                         if(row[4]):
                             episode_min=int(row[4])+1
-                            print("Minimum episode set to",episode_min-1) # TODO revise
+                            print("Minimum episode set to",episode_min-1)
                         else:
                             episode_min=row[4]
                         episode_max=row[5]
