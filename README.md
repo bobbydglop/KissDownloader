@@ -4,18 +4,14 @@ Automatically download video from kissanime.ru, kisscartoon.se and kissasian.com
 Contact for support/troubleshooting https://discord.gg/W7uVTd7 (Username - Yubikiri).<br>
 <br>
 **Features:**
-* Parrallel downloader, with support to specify how many asynchronous downloads are allowed at the same time!
-* GUI to easily queue series to download!
-* Resumable operations, cancel the operation anytime.
-* Files are verified if downloaded, to prevent redownloading downloaded files. Resumes from last downloaded episode.
-* Queue management to prevent link expiry.
-* Define max resolution to download, start and end episode.
+* GUI to easily queue multiple series to download.
+* Download multiple files at the same time.
 
 **Installation**
 * Install Python 3 [Download Here](https://www.python.org/downloads/)
 * Download and copy [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/) to folder of script
 * Install [Chrome](https://www.google.com.au/chrome/browser/desktop)
-* Run `pip install -r requirements.txt` to install required modules
+* Run `pip install -r requirements.txt` to install required modules.
 
 **Configuration**<br>
 KissDownloader.py configuration under #CONFIG<br>
