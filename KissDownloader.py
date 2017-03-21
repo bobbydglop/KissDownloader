@@ -125,7 +125,7 @@ class KissDownloader(threading.Thread):
             self.driver.implicitly_wait(30)
             self.driver.execute_script("window.stop()")
             time.sleep(1)
-            try: # send the filled out login form and wait
+            try: # fill login form and send
                 username=self.driver.find_element_by_id("username")
                 password=self.driver.find_element_by_id("password")
                 username.send_keys(user)
@@ -133,7 +133,7 @@ class KissDownloader(threading.Thread):
                 password.send_keys(Keys.RETURN)
                 time.sleep(2)
             except:
-                print("Error: page not loaded (critical)")
+                print("Error: login page not loaded (critical)")
                 return False
         except:
             print("Error: login failed")
@@ -147,25 +147,33 @@ class KissDownloader(threading.Thread):
             return True
 			
     def get_episode_regex(self, keyword, episode, keyword2, string):
-        #print(keyword,episode,keyword2,string)
         episode = episode.replace('-5', '.5')
         string = string.replace('-5', '.5')
-        regex = re.compile(keyword+'([0-9]*)'+keyword2)
+		#print(keyword,episode,keyword2,string)
+        if '.5' in episode and '.5' in string:
+            #print('decimal')
+            regex = re.compile(keyword+'([0-9]*).5'+keyword2)
+        else:
+            regex = re.compile(keyword+'([0-9]*)'+keyword2)
         try:
             if int(episode) == int(regex.findall(string)[0]):
-                if '.5' in string and '.5' in episode \
-					or '.5' not in episode:
+                if '.5' in episode and '.5' in string \
+					or '.5' not in episode and '.5' not in string:
                     print('Found [',keyword,episode,keyword2,'] in [',string,']')
-                    return int(regex.findall(string)[0])
+                    return regex.findall(string)[0]
+                #else:
+                #    print('Not2',episode,regex.findall(string)[0])
+            #else:
+            #    print('Not',episode,regex.findall(string)[0])
         except IndexError as e:
-            return ''
+            return None
         except ValueError as e:
-            return ''
-        return ''
+            return None
+        return None
 
     def get_episode_page(self, episode, site): # parse video url, get episode page from list
 		# TODO support for 0 episode
-		# TODO test support for -5 episode
+		# TODO test support for -5 episode http://kissanime.ru/Anime/Durarara episode 12.5
         soup=BeautifulSoup(self.rootPage, 'html.parser')
         init_episode=float(episode)
         episode=str(init_episode).replace(".0","")
@@ -274,12 +282,15 @@ class KissDownloader(threading.Thread):
         for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
             ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
             with ydl:
-                result=ydl.extract_info(link.get('href'), download=False) # extract info
-                if "entries" in result:
-                    video=result['entries'][0] # playlist video
-                else:
-                    video=result # single video
-                return [video['url'], "." + video['ext'], "720p"]
+                try:
+                    result=ydl.extract_info(link.get('href'), download=False) # extract info
+                    if "entries" in result:
+                        video=result['entries'][0] # playlist video
+                    else:
+                        video=result # single video
+                    return [video['url'], "." + video['ext'], "720p"]
+                except:
+                    print('Openload file not found')               
 
         return ["false", "", ""]
 
@@ -439,9 +450,8 @@ class KissDownloader(threading.Thread):
                     else:
                         print("> " + str(count) + " remain")
                         last_count=count
-		
         except KeyboardInterrupt:
-            os.exit("interrupt")
+            os.exit("interrupt") # TODO proper thread exit logic
         except:
             print("Error: download_message init failed")
 
@@ -525,6 +535,11 @@ class KissDownloader(threading.Thread):
         # writer.writerows([newrow])
 
         newfile.close()
+        try:
+            if not title:
+                sys.exit("Complete!")
+        except:
+            sys.exit("Complete!")
         try:
             for k, v in {'&&': '', '&': '_and_', "'s": 's'}.items(): # replace
                 title=title.replace(k, v)
