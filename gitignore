@@ -1,0 +1,6 @@
+.git
+__pycache__
+temp
+
+debug.log
+settings.py

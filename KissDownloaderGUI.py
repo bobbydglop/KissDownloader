@@ -2,7 +2,7 @@ from KissDownloader import *
 from tkinter import *
 from tkinter.ttk import *
 
-print("Ensure download script is not running!")
+#print("Ensure download script is not running!")
 
 class App(Frame):
 
@@ -16,7 +16,6 @@ class App(Frame):
 
         self.explain_label = Label(self, text="Queue series to be processed.").grid(row=1, column=1)
         self.explain_label2 = Label(self, text="Once queued press 'Start Download'.").grid(row=1, column=2)
-
 
     # create username label and field
     #    self.user_name_label = Label(self, text="Kiss Username: ").grid(row=2, column=1)
@@ -64,7 +63,6 @@ class App(Frame):
         self.download_button = Button(self, text='Start Download')
         self.download_button['command'] = self.run_download
         self.download_button.grid(row=11, column=2)
-
 
         if(demo_data == 1):
             self.url.insert(0, "http://kissanime.ru/Anime/Re-Zero-kara-Hajimeru-Isekai-Seikatsu")

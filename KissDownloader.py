@@ -147,8 +147,27 @@ class KissDownloader(threading.Thread):
             return False
         else:
             return True
+			
+    def get_episode_regex(self, keyword, episode, keyword2, string):
+        #print(keyword,episode,keyword2,string)
+        episode = episode.replace('-5', '.5')
+        string = string.replace('-5', '.5')
+        regex = re.compile(keyword+'([0-9]*)'+keyword2)
+        try:
+            if int(episode) == int(regex.findall(string)[0]):
+                if '.5' in string and '.5' in episode \
+					or '.5' not in episode:
+                    print('Found [',keyword,episode,keyword2,'] in [',string,']')
+                    return int(regex.findall(string)[0])
+        except IndexError as e:
+            return ''
+        except ValueError as e:
+            return ''
+        return ''
 
     def get_episode_page(self, episode, site): # parse video url, get episode page from list
+		# TODO support for 0 episode
+		# TODO test support for -5 episode
         soup=BeautifulSoup(self.rootPage, 'html.parser')
         init_episode=float(episode)
         episode=str(init_episode).replace(".0","")
@@ -157,55 +176,23 @@ class KissDownloader(threading.Thread):
             currentlink=link.get('href')
             if currentlink is None:
                 pass
-            elif "uncensored-episode-" + episode.zfill(3) + "?" in currentlink.lower() or "uncensored-episode-" + episode.zfill(2) + "?" in currentlink.lower() or "uncen-episode-" + episode.zfill(3) + "?" in currentlink.lower() or "uncen-episode-" + episode.zfill(2) + "?" in currentlink.lower() or "episode-" + episode.zfill(3) + "-uncensored?" in currentlink.lower() or "episode-" + episode.zfill(2) + "-uncensored?" in currentlink.lower() or "episode-" + episode.zfill(3) + "-uncen?" in currentlink.lower() or "episode-" + episode.zfill(2) + "-uncen?" in currentlink.lower() or "episode-" + episode.zfill(1) + "-uncen?" in currentlink.lower():
-                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
-                    return [site + "" + currentlink.lower(), True]
+            elif self.get_episode_regex('uncensored-episode-', episode, '', currentlink.lower()) \
+				or self.get_episode_regex('uncen-episode-', episode, '', currentlink.lower()) \
+				or self.get_episode_regex('episode-', episode, '-uncensored?', currentlink.lower()) \
+				or self.get_episode_regex('episode-', episode, '-uncen?', currentlink.lower()) \
+				or self.get_episode_regex('', episode, '?', currentlink.lower()):
+                return [site + "" + currentlink.lower(), True]
+
         for link in soup.findAll('a'): # censored
             currentlink=link.get('href')
             if currentlink is None:
                 pass
-            elif "episode-" + episode.zfill(3) in currentlink.lower() or "episode-" + episode.zfill(2) in currentlink.lower():
-                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
-                    return [site + "" + currentlink.lower(), False]
-            elif "ova-" + episode.zfill(3) in currentlink.lower() + "?" or "ova-" + episode.zfill(2) + "?" in currentlink.lower():
-                try:
-                    ovaep=str(currentlink).lower().split("ova-", 1)
-                    ovaep=ovaep[1]
-                    if(ovaep[:3].isdigit()):
-                        ovaep=ovaep[:3]
-                    elif(ovaep[:2].isdigit()):
-                        ovaep=ovaep[:2]
-                    if(int(episode) == int(ovaep)):
-                        if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
-                            return [site + "" + currentlink.lower(), False]
-                except NameError:
-                    print("OVA lookup failed")
-                except:
-                    print("OVA error")
-        for link in soup.findAll('a'): # strange
-            currentlink=link.get('href')
-            if currentlink is None:
-                pass
-            elif "episode-" + episode.zfill(3) + "-" in currentlink.lower() or "episode-" + episode.zfill(2) + "-" in currentlink.lower():
-                if "-5" not in episode and "-5" not in currentlink or "-5" in episode  and "-5" in currentlink:
-                    return [site + "" + currentlink.lower(), False]
+            elif self.get_episode_regex('episode-', episode, '', currentlink.lower()) \
+				or self.get_episode_regex('ova-', episode, '?', currentlink.lower()) \
+				or self.get_episode_regex('', episode, '?id=', currentlink.lower()):
+                return [site + "" + currentlink.lower(), False]
 
-        # teen titan http://kisscartoon.se/Cartoon/Teen-Titans/1?id=509 urls
-        # needs more testing and error handling
-        for link in soup.findAll('a'):
-            currentlink=link.get('href')
-            if currentlink is None:
-                pass
-            elif str(episode).zfill(3) + "?id=" in currentlink.lower() or str(episode).zfill(2) + "?id=" in currentlink.lower() or str(episode).zfill(1) + "?id=" in currentlink.lower():
-                episodexx = currentlink.split('?id=')[0]
-                episode_number = re.match('.*?([0-9]+)$', episodexx).group(1)
-                #print(episode, episode_number)
-                if episode == episode_number:
-                    #print("found",episode)
-                    return [site + "" + currentlink.lower(), False]
-
-
-        for link in soup.findAll('a'): # experimental
+        for link in soup.findAll('a'): # openload
             currentlink=link.get('href')
             if(currentlink is None):
                 pass
@@ -368,11 +355,8 @@ class KissDownloader(threading.Thread):
             extension=webdriver.ChromeOptions()
             extension.add_argument('--dns-prefetch-disable')
             extension.add_extension(dir_path + "/extension/ublock_origin.crx")
-            try:
-                self.driver=webdriver.Chrome(chrome_options=extension)
-                self.driver.set_page_load_timeout(50)
-            except:
-                sys.exit("Chrome failed to load")
+            self.driver=webdriver.Chrome(chrome_options=extension)
+            self.driver.set_page_load_timeout(50)
             l = True
             while l:
                 l=self.login(p[0], p[1], p[8])
@@ -403,10 +387,11 @@ class KissDownloader(threading.Thread):
                     else:
                         video=self.get_video_src(page[0], p[10])
                         KA=""
-                        if prefix:
-                            prefix2=p[6] + prefix
-                            KA="_KA"
-                        else:
+                        try:
+                            if prefix:
+                                prefix2=p[6] + prefix
+                                KA="_KA"
+                        except:
                             prefix2=""
                         if (video[0] != 'false'):
                             if e % 1 == 0:
@@ -456,10 +441,14 @@ class KissDownloader(threading.Thread):
                     else:
                         print("> " + str(count) + " remain")
                         last_count=count
+		
+        except KeyboardInterrupt:
+            sys.exit("interrupt")
         except:
             print("Error: download_message init failed")
 
         if(episode_list):
+            os.remove(dir_path + "/resolved.csv.trash")
             os.rename(dir_path + "/temp/resolved" + randnum + ".csv", dir_path + "/resolved.csv.trash")
             KissDownloader.init()
         else:
