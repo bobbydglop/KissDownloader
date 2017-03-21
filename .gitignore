@@ -5,3 +5,4 @@ temp
 debug.log
 resolved.csv.trash
 settings.py
+chromedriver.*
