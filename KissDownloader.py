@@ -156,7 +156,7 @@ class KissDownloader(threading.Thread):
         else:
             regex = re.compile(keyword+'([0-9]*)'+keyword2)
         try:
-            if int(episode) == int(regex.findall(string)[0]):
+            if float(episode) == float(regex.findall(string)[0]):
                 if '.5' in episode and '.5' in string \
 					or '.5' not in episode and '.5' not in string:
                     print('Found [',keyword,episode,keyword2,'] in [',string,']')
@@ -164,7 +164,7 @@ class KissDownloader(threading.Thread):
                 #else:
                 #    print('Not2',episode,regex.findall(string)[0])
             #else:
-            #    print('Not',episode,regex.findall(string)[0])
+            #    print('Not',float(episode),float(regex.findall(string)[0]))
         except IndexError as e:
             return None
         except ValueError as e:
@@ -377,7 +377,7 @@ class KissDownloader(threading.Thread):
         while k:
             try:
                 self.driver.get(p[3])
-                time.sleep(2)
+                time.sleep(3)
                 self.rootPage=self.driver.page_source
                 k=False
             except:
