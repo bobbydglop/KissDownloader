@@ -496,7 +496,11 @@ class KissDownloader(threading.Thread):
         if os.path.exists(dir_path + "/temp"):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
-
+		
+        resolved = Path(dir_path + "/resolved.csv")
+        if not resolved.is_file():
+            sys.exit('Error: no series queued to download!')
+		
         reader=csv.reader(open(dir_path + "/resolved.csv", "r"), delimiter=",")
         newfile=open(dir_path + "/temp/resolved" + randnum + ".csv", "a")
         writer=csv.writer(newfile)
