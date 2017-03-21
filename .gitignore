@@ -3,4 +3,5 @@ __pycache__
 temp
 
 debug.log
+resolved.csv.trash
 settings.py
