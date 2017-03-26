@@ -2,8 +2,7 @@
 __pycache__
 temp
 *.mp4
-
-debug.log
+*.log
 resolved.csv
 resolved.csv.trash
 settings.py

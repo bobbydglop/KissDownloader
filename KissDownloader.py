@@ -30,8 +30,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from Settings import *
-from DownloadGUI import *
+from settings import *
 
 # TODO DownloadGUI
 # TODO Test http://kissanime.ru/Anime/Naruto-Shippuuden-Dub
@@ -73,7 +72,7 @@ class KissDownloader(threading.Thread):
                 count=count + 1
                 if not os.path.isfile(nestlist[0][2] + nestlist[0][1]):
                     episode=str(nestlist[0][3])
-                    print("Download", episode)
+                    #print("Download", episode)
                     #urlretrieve(str(host).replace(" ","%20"), str(nestlist[0][2] + "temp/" + nestlist[0][1]))
                     #path=nestlist[0][2] + "temp/" + nestlist[0][1]
                     #location=obj.get_dest()
@@ -271,46 +270,39 @@ class KissDownloader(threading.Thread):
         except:
             sys.exit("Resolution error " + str(resolution))
 
-        linkdata = ""
-        while len(linkdata) == 0: # find download links, retrieve by resolution
-            if(resolution >= 1080 or resolution == 0):
-                teneighty=pattern=re.compile(r'x1080.mp4')
-                for link in soup.findAll('a', text=teneighty):
-                    linkdata = [link.get('href'), ".mp4", "1080p"]
-            if(resolution >= 720 or resolution == 0):
-                seventwenty=pattern=re.compile(r'x720.mp4')
-                for link in soup.findAll('a', text=seventwenty):
-                    linkdata = [link.get('href'), ".mp4", "720p"]
-            if(resolution >= 480 or resolution == 0):
-                foureighty=pattern=re.compile(r'x480.mp4')
-                for link in soup.findAll('a', text=foureighty):
-                    linkdata = [link.get('href'), ".mp4", "480p"]
-            if(resolution >= 360 or resolution == 0):
-                threesixty=pattern=re.compile(r'x360.mp4')
-                for link in soup.findAll('a', text=threesixty):
-                    linkdata = [link.get('href'), ".mp4", "360p"]
-            if(resolution >= 0): # fallback
-                finalcheck=pattern=re.compile(r'.mp4')
-                for link in soup.findAll('a', text=finalcheck):
-                    resolutionr=str(link).rsplit('.mp4')[0][-3:]
-                    if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
-                        linkdata = [link.get('href'), ".mp4", resolutionr + "p"]
+        if(resolution >= 1080 or resolution == 0):
+            teneighty=pattern=re.compile(r'x1080.mp4')
+            for link in soup.findAll('a', text=teneighty):
+                return [link.get('href'), ".mp4", "1080p"]
+        if(resolution >= 720 or resolution == 0):
+            seventwenty=pattern=re.compile(r'x720.mp4')
+            for link in soup.findAll('a', text=seventwenty):
+                return [link.get('href'), ".mp4", "720p"]
+        if(resolution >= 480 or resolution == 0):
+            foureighty=pattern=re.compile(r'x480.mp4')
+            for link in soup.findAll('a', text=foureighty):
+                return [link.get('href'), ".mp4", "480p"]
+        if(resolution >= 360 or resolution == 0):
+            threesixty=pattern=re.compile(r'x360.mp4')
+            for link in soup.findAll('a', text=threesixty):
+                return [link.get('href'), ".mp4", "360p"]
+        if(resolution >= 0): # fallback
+            finalcheck=pattern=re.compile(r'.mp4')
+            for link in soup.findAll('a', text=finalcheck):
+                resolutionr=str(link).rsplit('.mp4')[0][-3:]
+                if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
+                    return [link.get('href'), ".mp4", resolutionr + "p"]
 
-            for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
-                ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
-                with ydl:
-                    try:
-                        result=ydl.extract_info(link.get('href'), download=False) # extract info
-                        if "entries" in result:
-                            video=result['entries'][0] # playlist video
-                        else:
-                            video=result # single video
-                        linkdata = [video['url'], "." + video['ext'], "720p"]
-                    except:
-                        print('Openload file not found')
+        for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
+            ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
+            with ydl:
+                result=ydl.extract_info(link.get('href'), download=False) # extract info
+                if "entries" in result:
+                    video=result['entries'][0] # playlist video
+                else:
+                    video=result # single video
+                return [video['url'], "." + video['ext'], "720p"]
 
-        if linkdata:
-            return linkdata
         return ["false", "", ""]
 
     def frange(self, start, stop, step):

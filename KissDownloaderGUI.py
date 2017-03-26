@@ -91,24 +91,25 @@ class StartPage(tk.Frame):
             if(valid == 0):
                 with open( dir_path + '/resolved.csv', 'a') as csvfile:
                     thewriter = csv.writer(csvfile, delimiter=',')
+                    #print(str(params))
                     params = [str(self.title.get()), str(self.url.get()), '0', str(self.episode_count.get()), str(self.episode_min.get()), str(self.episode_max.get()), str(self.quality_select.get()[:-1])]
                     thewriter.writerow(params)
-                #print(str(params))
-                print("Queued [" + str(self.title.get()) + "]!")
+                #print("Queued", self.title.get())
         else:
             print('URL invalid')
 
 class PageOne(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        button = tk.Button(self, text="Read queue", command=self.readCSV)
+        button = tk.Button(self, text="Read queue", command=self.readCSV) # TODO on change to PageOne run function
         button.pack()
         self.controller=controller
+        self.dir_path = dir_path=os.path.dirname(os.path.realpath(__file__))
 
     def readCSV(self):
         valid = 0
         columns = defaultdict(list) # each value in each column is appended to a list
-        with open('resolved.csv','r',  newline='') as f:
+        with open('resolved.csv','r') as f:
           reader = csv.reader(f,delimiter=',')
           for row in reader:
             try:
@@ -116,11 +117,10 @@ class PageOne(tk.Frame):
                     if valid == 0:
                         Label(self, text="Queued items:").pack()
                         valid = 1
-                    new_btn = Button(self, text=row[0], command=self.btnClick)
+                    new_btn = Button(self, text=row[0], command=self.btnClick(row[1]))
                     new_btn.pack()
             except IndexError as e:
-                print(e)
-                break
+                pass
 
         if valid == 1:
             button3 = tk.Button(self, text="Start Download", command=self.initiate)
@@ -128,8 +128,10 @@ class PageOne(tk.Frame):
         else:
             Label(self, text="No queued items :(").pack()
 
-    def btnClick(self):
-        pass # delete csv row
+    def btnClick(self, row_url):
+        # print(row_url)
+        # csv where row_url in row, delete row
+        pass
 
     def initiate(self):
         self.controller.destroy()
@@ -138,7 +140,7 @@ class PageOne(tk.Frame):
 app = OneVoltTen()
 app.mainloop()
 
-class KissDownloadGUI(tk.Tk):
+class KissDownloadGUI(tk.Tk): # TODO
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         self.container = tk.Frame(self)
