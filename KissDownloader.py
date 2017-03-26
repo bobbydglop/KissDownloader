@@ -296,12 +296,15 @@ class KissDownloader(threading.Thread):
         for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
             ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
             with ydl:
-                result=ydl.extract_info(link.get('href'), download=False) # extract info
-                if "entries" in result:
-                    video=result['entries'][0] # playlist video
-                else:
-                    video=result # single video
-                return [video['url'], "." + video['ext'], "720p"]
+                try:
+                    result=ydl.extract_info(link.get('href'), download=False) # extract info
+                    if "entries" in result:
+                        video=result['entries'][0] # playlist video
+                    else:
+                        video=result # single video
+                    return [video['url'], "." + video['ext'], "720p"]
+                except ValueError as e:
+                    print('Openload logic error')
 
         return ["false", "", ""]
 
