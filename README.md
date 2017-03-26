@@ -1,5 +1,5 @@
 # KissBot
-Automatically download video from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet. Reliably mass download videos.<br>
+Automatically mass download video from kissanime.ru, kisscartoon.se and kissasian.com via a spreadsheet.<br>
 <br>
 Contact for support/troubleshooting https://discord.gg/W7uVTd7 (Username - Yubikiri).<br>
 <br>
@@ -14,14 +14,9 @@ Contact for support/troubleshooting https://discord.gg/W7uVTd7 (Username - Yubik
 * Run `pip install -r requirements.txt` to install required modules.
 
 **Configuration**<br>
-KissDownloader.py configuration under #CONFIG<br>
-* 'username' and 'userpassword' as kiss account
+settings.py define your 'username' and 'userpassword'
 
 **Usage**<br>
-Run KissDownloaderGUI.py <br>
-* URL:                 [Kiss url to page listing episodes] (required)
-* Filename:            [Filename used for downloaded files] (required)
-* Episode Count:  0    [Episode count, numeric value] (required)
-* Episode Min:    0    [First episode to download, numeric value] (ignored if 0)
-* Episode Max:    0    [Last episode to download, numeric value] (ignored if 0)
-* Resolution:     720p [Restrict resolution to quality equal to or less than ('360','480','720','1080')] (Ignored if 0)
+Run KissDownloaderGUI.py<br>
+Queue series to download<br>
+Start Download<br>

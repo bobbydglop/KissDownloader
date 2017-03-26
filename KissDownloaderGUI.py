@@ -1,68 +1,69 @@
 from KissDownloader import *
-from tkinter import *
+
 from tkinter.ttk import *
+import tkinter.ttk as ttk
+import tkinter as tk
+from tkinter import StringVar
+import csv
+from collections import defaultdict
+import os
 
-#print("Ensure download script is not running!")
+if not os.path.exists(dir_path+'/resolved.csv'):
+    open(dir_path+'/resolved.csv', 'a').close()
 
-class App(Frame):
+class OneVoltTen(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        container = tk.Frame(self)
 
-    def __init__(self):
-        Frame.__init__(self)
-        self.master.title("KissDownloader")
-        self.grid()
-        self.master.geometry("450x200")
+        container.pack(side="top", fill="both", expand = True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
 
-    # TODO add logic to read the username,password,destination from ini file
+        self.frames = {}
+        for F in (StartPage, PageOne):
+            frame = F(container, self)
 
-        self.explain_label = Label(self, text="Queue series to be processed.").grid(row=1, column=1)
-        self.explain_label2 = Label(self, text="Once queued press 'Start Download'.").grid(row=1, column=2)
+            self.frames[F] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
 
-    # create username label and field
-    #    self.user_name_label = Label(self, text="Kiss Username: ").grid(row=2, column=1)
-    #    self.user_name = Entry(self, width=30)
-    #    self.user_name.grid(row=2, column=2)
-    # create password label and field
-    #    self.user_password_label = Label(self, text="Kiss Password: ").grid(row=3, column=1)
-    #    self.user_password = Entry(self, show="*", width=30)
-    #    self.user_password.grid(row=3, column=2)
-    # create root destination label and field
-    #    self.destination_label = Label(self, text="Enter destination folder: ").grid(row=4, column=1)
-    #    self.destination = Entry(self, width=30)
-    #    self.destination.grid(row=4, column=2)
-    # create kissanime url label and field
-        self.url_label = Label(self, text="Enter series URL: ").grid(row=5, column=1)
+        self.show_frame(StartPage)
+
+    def show_frame(self, cont):
+        frame = self.frames[cont]
+        frame.tkraise()
+
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self,parent)
+
+        controller.title("KissDownloader")
+
+        Label(self, text="Enter series URL: ").pack()
         self.url = Entry(self, width=30)
-        self.url.grid(row=5, column=2)
-    # create series name label and field
-        self.title_label = Label(self, text="Enter series name: ").grid(row=6, column=1)
+        self.url.pack()
+
+        Label(self, text="Enter series name: ").pack()
         self.title = Entry(self, width=30)
-        self.title.grid(row=6, column=2)
-    # create episode total label and field
-        self.episode_count_label = Label(self, text="Enter series episode count: ").grid(row=7, column=1)
+        self.title.pack()
+
+        Label(self, text="Enter series episode count: ").pack()
         self.episode_count = Entry(self, width=30)
-        self.episode_count.grid(row=7, column=2)
-    # create episode min label and field
-        self.episode_min_label = Label(self, text="Download from episode (min): ").grid(row=8, column=1)
+        self.episode_count.pack()
+
+        Label(self, text="Download from episode (min): ").pack()
         self.episode_min = Entry(self, width=30)
-        self.episode_min.grid(row=8, column=2)
-    # create episode max label and field
-        self.episode_max_label = Label(self, text="Download to episode (max): ").grid(row=9, column=1)
+        self.episode_min.pack()
+
+        Label(self, text="Download to episode (max): ").pack()
         self.episode_max = Entry(self, width=30)
-        self.episode_max.grid(row=9, column=2)
-    # create label for quality select
-        self.site_select_label = Label(self, text="Select maximum resolution: ").grid(row=10, column=1)
-    # create a Combobox with quality to choose from
-        self.available_quality = ["1080p", "720p", "480p", "360p"]
-        self.quality_select = Combobox(self, values=self.available_quality)
-        self.quality_select.grid(row=10, column=2, padx=32, pady=8)
-    # queue button
-        self.queue_button = Button(self, text='Queue')
-        self.queue_button['command'] = self.queue_download
-        self.queue_button.grid(row=11, column=1)
-    # download button
-        self.download_button = Button(self, text='Start Download')
-        self.download_button['command'] = self.run_download
-        self.download_button.grid(row=11, column=2)
+        self.episode_max.pack()
+
+        Label(self, text="Select maximum resolution: ").pack()
+        self.quality_select = Combobox(self, values=["1080p", "720p", "480p", "360p"], width=27)
+        self.quality_select.pack()
+
+        self.queue_button = Button(self, text='Queue', width=14, command=self.queue_download).pack()
 
         if(demo_data == 1):
             self.url.insert(0, "http://kissanime.ru/Anime/Re-Zero-kara-Hajimeru-Isekai-Seikatsu")
@@ -72,16 +73,16 @@ class App(Frame):
             self.episode_max.insert(0, "0")
         self.quality_select.set("720p")
 
-    def queue_download(self):
-        # validate
-        valid = 0
 
-        for checkurl in ["http://","https://","www."]:
-            if(checkurl in str(self.url.get())):
-                valid = 0
-        if(valid == 1):
-            print("URL invalid please check!")
-        else:
+        Label(self, text="Once queued series: ").pack()
+        button = tk.Button(self, text="Next", width=12, command=lambda: controller.show_frame(PageOne))
+        button.pack()
+
+    def queue_download(self):
+        if("https://" in str(self.url.get()) \
+            or "http://" in str(self.url.get()) \
+            or "www." in str(self.url.get())):
+            valid = 0
             for checkint in ["episode_count","episode_min","episode_max"]:
                 try_this = "self." + checkint + ".get()"
                 if not eval(try_this).isdigit():
@@ -92,13 +93,84 @@ class App(Frame):
                     thewriter = csv.writer(csvfile, delimiter=',')
                     params = [str(self.title.get()), str(self.url.get()), '0', str(self.episode_count.get()), str(self.episode_min.get()), str(self.episode_max.get()), str(self.quality_select.get()[:-1])]
                     thewriter.writerow(params)
-                print(str(params))
-                print("Inserted [" + str(self.title.get()) + "] into resolved.csv!")
+                #print(str(params))
+                print("Queued [" + str(self.title.get()) + "]!")
+        else:
+            print('URL invalid')
 
-    def run_download(self):
-        root.quit() # close window
+class PageOne(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        button = tk.Button(self, text="Read queue", command=self.readCSV)
+        button.pack()
+        self.controller=controller
+
+    def readCSV(self):
+        valid = 0
+        columns = defaultdict(list) # each value in each column is appended to a list
+        with open('resolved.csv','r',  newline='') as f:
+          reader = csv.reader(f,delimiter=',')
+          for row in reader:
+            try:
+                if row[0]:
+                    if valid == 0:
+                        Label(self, text="Queued items:").pack()
+                        valid = 1
+                    new_btn = Button(self, text=row[0], command=self.btnClick)
+                    new_btn.pack()
+            except IndexError as e:
+                print(e)
+                break
+
+        if valid == 1:
+            button3 = tk.Button(self, text="Start Download", command=self.initiate)
+            button3.pack()
+        else:
+            Label(self, text="No queued items :(").pack()
+
+    def btnClick(self):
+        pass # delete csv row
+
+    def initiate(self):
+        self.controller.destroy()
         KissDownloader.init()
 
-root = Tk()
-app = App()
-root.mainloop()
+app = OneVoltTen()
+app.mainloop()
+
+class KissDownloadGUI(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        self.container = tk.Frame(self)
+        self.container.pack(side="top", fill="both", expand = True)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+        self.v = tk.StringVar()
+        Label(self.container, textvariable=self.v).pack()
+
+        self.v.set("New Text!")
+
+        self.container.mainloop()
+
+    def update(self):
+        global count
+        global download_prog
+        global download_list
+        download_prog=False
+
+        while(download_prog==False): # one instance
+            print(1, count)
+            while count > 0:
+                print(2, count)
+                for item in download_list:
+                    print(download_list[item]) # output download progress
+                    self.v.set(download_list[item])
+                time.sleep(1)
+            download_prog=True
+        print(3)
+
+        print(4)
+
+    def destroy(self):
+        self.container.destroy()

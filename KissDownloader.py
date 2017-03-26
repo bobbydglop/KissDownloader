@@ -1,49 +1,58 @@
 #!/usr/bin/env python
-import urllib
-import csv
-import re
-import socket
-import requests
 import sys
 import os
 import time
 import glob
 import shutil
 import random
+from random import randint
+import csv
+import re
+import socket
+import requests
+from pathlib import Path
+
 import threading
-import youtube_dl
-import pySmartDL
-from settings import *
-import urllib.request as urllib2
-import queue as Queue
 from threading import Thread, Lock
+import queue as Queue
+
+import urllib
+import urllib.request as urllib2
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
-from pathlib import Path
+
+import youtube_dl
+import pySmartDL
+
 from bs4 import BeautifulSoup
-from random import randint
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-# TODO Fix GUI not closing when click start download
-# TODO Add support for movies/episodes not following the standard naming schema
+from Settings import *
+from DownloadGUI import *
+
+# TODO DownloadGUI
+# TODO Test http://kissanime.ru/Anime/Naruto-Shippuuden-Dub
+# TODO QueueGUI
+# TODO Revise get_episode logic, support non-standard naming schema
+# TODO PyInstaller create windows executable
 
 if not str(username):
     sys.exit("Undefined 'username' in settings.py")
 if not str(userpassword):
     sys.exit("Undefined 'userpassword' in settings.py")
 
+
 dir_path=os.path.dirname(os.path.realpath(__file__))
 randnum=str(randint(1, 100000)) # used to create random filename, should be revised
 queue=Queue.Queue()
-download_prog=0
 count=0
 download_list=({})
+download_prog = False
 
 class KissDownloader(threading.Thread):
-
     def __init__(self, params, queue):
         if(params):
             self.rootPage=""
@@ -58,6 +67,7 @@ class KissDownloader(threading.Thread):
         global download_list
         while True:
             host=self.queue.get()
+            #print('url',host)
             nestlist=[x for x in episode_list if host in x[0]]
             if(nestlist):
                 count=count + 1
@@ -81,7 +91,7 @@ class KissDownloader(threading.Thread):
                                 download_list[nestlist[0][3]].append(console_output) # initial
                         time.sleep(1)
                         if progress == 100 and obj.get_eta() == 0:
-                            time.sleep(2)
+                            time.sleep(1)
                     if obj.isFinished():
                         try:
                             del download_list[nestlist[0][3]] # remove
@@ -102,9 +112,15 @@ class KissDownloader(threading.Thread):
         if(download_prog == 0): # one instance
             download_prog=1
             while count > 0:
-                print("\u2500\u2500\u2500\u2500\u2500\u2500") # ------
+                sep = 0
                 for item in download_list:
-                    print(download_list[item]) # output download progress
+                    if download_list[item]:
+                        if sep == 0:
+                            sep = 1
+                            print("\u2500\u2500\u2500\u2500\u2500\u2500") # ------
+                        print(download_list[item]) # output download progress
+                    else:
+                        print('Download starting...')
                     #print(str(item), ':', download_list[item])
                 time.sleep(4)
             download_prog=0
@@ -145,7 +161,7 @@ class KissDownloader(threading.Thread):
             return False
         else:
             return True
-			
+
     def get_episode_regex(self, keyword, episode, keyword2, string):
         episode = episode.replace('-5', '.5')
         string = string.replace('-5', '.5')
@@ -255,43 +271,46 @@ class KissDownloader(threading.Thread):
         except:
             sys.exit("Resolution error " + str(resolution))
 
-        # find download links, retrieve by resolution
-        if(resolution >= 1080 or resolution == 0):
-            teneighty=pattern=re.compile(r'x1080.mp4')
-            for link in soup.findAll('a', text=teneighty):
-                return [link.get('href'), ".mp4", "1080p"]
-        if(resolution >= 720 or resolution == 0):
-            seventwenty=pattern=re.compile(r'x720.mp4')
-            for link in soup.findAll('a', text=seventwenty):
-                return [link.get('href'), ".mp4", "720p"]
-        if(resolution >= 480 or resolution == 0):
-            foureighty=pattern=re.compile(r'x480.mp4')
-            for link in soup.findAll('a', text=foureighty):
-                return [link.get('href'), ".mp4", "480p"]
-        if(resolution >= 360 or resolution == 0):
-            threesixty=pattern=re.compile(r'x360.mp4')
-            for link in soup.findAll('a', text=threesixty):
-                return [link.get('href'), ".mp4", "360p"]
-        if(resolution >= 0): # fallback
-            finalcheck=pattern=re.compile(r'.mp4')
-            for link in soup.findAll('a', text=finalcheck):
-                resolutionr=str(link).rsplit('.mp4')[0][-3:]
-                if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
-                    return [link.get('href'), ".mp4", resolutionr + "p"]
+        linkdata = ""
+        while len(linkdata) == 0: # find download links, retrieve by resolution
+            if(resolution >= 1080 or resolution == 0):
+                teneighty=pattern=re.compile(r'x1080.mp4')
+                for link in soup.findAll('a', text=teneighty):
+                    linkdata = [link.get('href'), ".mp4", "1080p"]
+            if(resolution >= 720 or resolution == 0):
+                seventwenty=pattern=re.compile(r'x720.mp4')
+                for link in soup.findAll('a', text=seventwenty):
+                    linkdata = [link.get('href'), ".mp4", "720p"]
+            if(resolution >= 480 or resolution == 0):
+                foureighty=pattern=re.compile(r'x480.mp4')
+                for link in soup.findAll('a', text=foureighty):
+                    linkdata = [link.get('href'), ".mp4", "480p"]
+            if(resolution >= 360 or resolution == 0):
+                threesixty=pattern=re.compile(r'x360.mp4')
+                for link in soup.findAll('a', text=threesixty):
+                    linkdata = [link.get('href'), ".mp4", "360p"]
+            if(resolution >= 0): # fallback
+                finalcheck=pattern=re.compile(r'.mp4')
+                for link in soup.findAll('a', text=finalcheck):
+                    resolutionr=str(link).rsplit('.mp4')[0][-3:]
+                    if(int(resolutionr) and int(resolutionr) >= 360 and int(resolutionr) <= 1080):
+                        linkdata = [link.get('href'), ".mp4", resolutionr + "p"]
 
-        for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
-            ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
-            with ydl:
-                try:
-                    result=ydl.extract_info(link.get('href'), download=False) # extract info
-                    if "entries" in result:
-                        video=result['entries'][0] # playlist video
-                    else:
-                        video=result # single video
-                    return [video['url'], "." + video['ext'], "720p"]
-                except:
-                    print('Openload file not found')               
+            for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
+                ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
+                with ydl:
+                    try:
+                        result=ydl.extract_info(link.get('href'), download=False) # extract info
+                        if "entries" in result:
+                            video=result['entries'][0] # playlist video
+                        else:
+                            video=result # single video
+                        linkdata = [video['url'], "." + video['ext'], "720p"]
+                    except:
+                        print('Openload file not found')
 
+        if linkdata:
+            return linkdata
         return ["false", "", ""]
 
     def frange(self, start, stop, step):
@@ -362,8 +381,10 @@ class KissDownloader(threading.Thread):
 
         if(int(ecount) < maxretrieve):
             extension=webdriver.ChromeOptions()
-            extension.add_argument('--dns-prefetch-disable')
             extension.add_extension(dir_path + "/extension/ublock_origin.crx")
+            extension.add_argument('--dns-prefetch-disable')
+            #prefs = {"profile.managed_default_content_settings.images":2}
+            #extension.add_experimental_option("prefs",prefs)
             self.driver=webdriver.Chrome(chrome_options=extension)
             self.driver.set_page_load_timeout(50)
             l = True
@@ -389,9 +410,10 @@ class KissDownloader(threading.Thread):
 
             for e in self.frange(float(epcount), int(maxretrieve), 0.5):
                 if(int(ecount) < int(download_threads) * 3 and int(ecount) < int(maxretrieve)):
-                    time.sleep(random.randint(2, 4))
+                    time.sleep(2)
                     page=self.get_episode_page(e, p[8])
                     if page[0] == "":
+                        print('Reading page episodes...')
                         pass
                     else:
                         video=self.get_video_src(page[0], p[10])
@@ -436,10 +458,13 @@ class KissDownloader(threading.Thread):
 
         self.driver.close()
 
+        # DownloadGUI Initiate
+
         try:
             last_count=9001
             while(count > 0):
-                time.sleep(1)
+                time.sleep(5) # allow downloads to start
+
                 t=threading.Thread(target=KissDownloader.download_message())
                 t.daemon=True
                 t.start()
@@ -451,12 +476,13 @@ class KissDownloader(threading.Thread):
                         print("> " + str(count) + " remain")
                         last_count=count
         except KeyboardInterrupt:
-            os.exit("interrupt") # TODO proper thread exit logic
-        except:
-            print("Error: download_message init failed")
+            sys.exit("keyboard interrupt") # TODO proper thread exit logic
 
         if(episode_list):
-            os.remove(dir_path + "/resolved.csv.trash")
+            try:
+                os.remove(dir_path + "/resolved.csv.trash")
+            except FileNotFoundError as e:
+                pass
             os.rename(dir_path + "/temp/resolved" + randnum + ".csv", dir_path + "/resolved.csv.trash")
             KissDownloader.init()
         else:
@@ -496,11 +522,11 @@ class KissDownloader(threading.Thread):
         if os.path.exists(dir_path + "/temp"):
             shutil.rmtree(dir_path + "/temp")
         os.mkdir(dir_path + "/temp")
-		
+
         resolved = Path(dir_path + "/resolved.csv")
         if not resolved.is_file():
             sys.exit('Error: no series queued to download!')
-		
+
         reader=csv.reader(open(dir_path + "/resolved.csv", "r"), delimiter=",")
         newfile=open(dir_path + "/temp/resolved" + randnum + ".csv", "a")
         writer=csv.writer(newfile)
