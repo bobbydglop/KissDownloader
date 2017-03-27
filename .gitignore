@@ -3,7 +3,10 @@ __pycache__
 temp
 *.mp4
 *.log
+build.bat
+KissDownloader.spec
+KissDownloader.exe
 resolved.csv
 resolved.csv.trash
-settings.py
-chromedriver.*
+*.trash
+chromedriver.exe

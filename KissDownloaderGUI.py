@@ -31,7 +31,7 @@ class OneVoltTen(tk.Tk):
 
     def show_frame(self, cont):
         if 'PageOne' in str(cont):
-            pass # run readCSV function
+            pass # TODO run readCSV function
         frame = self.frames[cont]
         frame.tkraise()
 
@@ -67,7 +67,7 @@ class StartPage(tk.Frame):
 
         self.queue_button = Button(self, text='Queue', width=14, command=self.queue_download).pack()
 
-        if(demo_data == 1):
+        if(int(demo_data) == 1):
             self.url.insert(0, "http://kissanime.ru/Anime/Re-Zero-kara-Hajimeru-Isekai-Seikatsu")
             self.title.insert(0, "Re Zero")
             #self.episode_count.insert(0, "25")
@@ -88,7 +88,7 @@ class StartPage(tk.Frame):
             for checkint in ["episode_min","episode_max"]:
                 try_this = "self." + checkint + ".get()"
                 if not eval(try_this).isdigit():
-                    print(checkint + " must be number!")
+                    utils.log(checkint + " must be number!")
                     valid = 1
             if(valid == 0):
                 with open( dir_path + '/resolved.csv', 'a') as csvfile:
@@ -96,9 +96,9 @@ class StartPage(tk.Frame):
                     #print(str(params))
                     params = [str(self.title.get()), str(self.url.get()), '0', '9999', str(self.episode_min.get()), str(self.episode_max.get()), str(self.quality_select.get()[:-1])]
                     thewriter.writerow(params)
-                #print("Queued", self.title.get())
+                utils.log("Queued " + str(self.title.get()))
         else:
-            print('URL invalid')
+            utils.log('URL invalid')
 
 class PageOne(tk.Frame):
 
@@ -188,9 +188,6 @@ class KissDownloadGUI(tk.Tk): # TODO
                     self.v.set(download_list[item])
                 time.sleep(1)
             download_prog=True
-        print(3)
-
-        print(4)
 
     def destroy(self):
         self.container.destroy()

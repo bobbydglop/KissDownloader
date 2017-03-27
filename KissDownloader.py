@@ -30,21 +30,31 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from settings import *
+from utils import *
 
-# TODO DownloadGUI
-# TODO Test http://kissanime.ru/Anime/Naruto-Shippuuden-Dub
-# TODO QueueGUI
+# TODO Fix min episode
 # TODO Revise get_episode logic, support non-standard naming schema
-# TODO PyInstaller create windows executable
 
-if not str(username):
-    sys.exit("Undefined 'username' in settings.py")
-if not str(userpassword):
-    sys.exit("Undefined 'userpassword' in settings.py")
+utils.log("== Starting up ==")
+utils.config = utils.read_settings()
+if not utils.config['DEFAULT']['username'] or not utils.config['DEFAULT']['userpassword']:
+    utils.log("Please provide username and password in the configuration file.")
+    sys.exit()
+else:
+    username = utils.config['DEFAULT']['username']
+    userpassword = utils.config['DEFAULT']['userpassword']
+    destination_folder = utils.config['DEFAULT']['destination_folder']
 
+    download_threads = utils.config['OTHER']['download_threads']
+    complete_dir = utils.config['OTHER']['complete_dir']
+    demo_data = utils.config['OTHER']['demo_data']
 
-dir_path=os.path.dirname(os.path.realpath(__file__))
+if getattr(sys, 'frozen', False):
+    dir_path = os.path.dirname(sys.executable)
+elif __file__:
+    dir_path = os.path.dirname(__file__)
+
+print(dir_path)
 randnum=str(randint(1, 100000)) # used to create random filename, should be revised
 queue=Queue.Queue()
 count=0
@@ -95,12 +105,12 @@ class KissDownloader(threading.Thread):
                         try:
                             del download_list[nestlist[0][3]] # remove
                         except:
-                            print("Error: unable to remove episode", nestlist[0][3])
+                            utils.log("Error: unable to remove episode" + str(nestlist[0][3]))
                         try:
                             shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1]) # move on download complete
                         except:
-                            print("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
-                    print("Completed", episode)
+                            utils.log("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
+                    utils.log("Completed" + str(episode))
                 count=count - 1
                 self.queue.task_done()
 
@@ -116,10 +126,10 @@ class KissDownloader(threading.Thread):
                     if download_list[item]:
                         if sep == 0:
                             sep = 1
-                            print("\u2500\u2500\u2500\u2500\u2500\u2500") # ------
-                        print(download_list[item]) # output download progress
+                            utils.log("\u2500\u2500\u2500\u2500\u2500\u2500") # ------
+                        utils.log(download_list[item]) # output download progress
                     else:
-                        print('Download starting...')
+                        utils.log('Download starting...')
                     #print(str(item), ':', download_list[item])
                 time.sleep(4)
             download_prog=0
@@ -129,11 +139,11 @@ class KissDownloader(threading.Thread):
         while (status == 503 and status != ""):
             req=requests.head(str(site))
             status=req.status_code
-            print("status code: " + str(req.status_code))
+            utils.log("status code: " + str(req.status_code))
             return status
             time.sleep(2)
 
-        print("Login...  (5 second cloudflare check)")
+        utils.log("Login...  (5 second cloudflare check)")
         try:
             self.driver.get(str(site) + "/Login")
             time.sleep(4)
@@ -148,10 +158,10 @@ class KissDownloader(threading.Thread):
                 password.send_keys(Keys.RETURN)
                 time.sleep(2)
             except:
-                print("Error: login page not loaded (critical)")
+                utils.log("Error: login page not loaded (critical)")
                 return False
         except:
-            print("Error: login failed")
+            utils.log("Error: login failed")
             time.sleep(4)
             return False
 
@@ -174,7 +184,7 @@ class KissDownloader(threading.Thread):
             if float(episode) == float(regex.findall(string)[0]):
                 if '.5' in episode and '.5' in string \
 					or '.5' not in episode and '.5' not in string:
-                    print('Found [',keyword,episode,keyword2,'] in [',string,']')
+                    utils.log('Found ['+str(keyword)+str(episode)+str(keyword2)+'] in ['+str(string)+']')
                     return regex.findall(string)[0]
                 #else:
                 #    print('Not2',episode,regex.findall(string)[0])
@@ -249,7 +259,7 @@ class KissDownloader(threading.Thread):
                 # print(page.text)
                 url=self.driver.current_url
                 if "Special/AreYouHuman?" in str(url):
-                    print("Captcha " + str(self.driver.current_url))
+                    utils.log("Captcha " + str(self.driver.current_url))
                     # webbrowser.open(self.driver.current_url)
                     while("Special/AreYouHuman?" in str(self.driver.current_url)):
                         time.sleep(1)
@@ -257,7 +267,7 @@ class KissDownloader(threading.Thread):
                 else:
                     x=False
             except:
-                print("Timeout [" + str(episode_page) + "] Retrying...")
+                utils.log("Timeout [" + str(episode_page) + "] Retrying...")
                 time.sleep(random.randint(5, 10))
         # print(page.url)
         currentpage=self.driver.page_source
@@ -268,7 +278,8 @@ class KissDownloader(threading.Thread):
         try:
             resolution=int(resolution)
         except:
-            sys.exit("Resolution error " + str(resolution))
+            utils.log("Resolution error " + str(resolution))
+            sys.exit()
 
         if(resolution >= 1080 or resolution == 0):
             teneighty=pattern=re.compile(r'x1080.mp4')
@@ -304,7 +315,7 @@ class KissDownloader(threading.Thread):
                         video=result # single video
                     return [video['url'], "." + video['ext'], "720p"]
                 except ValueError as e:
-                    print('Openload logic error')
+                    utils.log('Openload logic error')
 
         return ["false", "", ""]
 
@@ -315,14 +326,14 @@ class KissDownloader(threading.Thread):
                 yield i
                 i += step
         except:
-            print("frange error")
+            utils.log("frange error")
 
     def zpad(self, val, n):
         try:
             bits=val.split('.')
             return "%s.%s" % (bits[0].zfill(n), bits[1])
         except:
-            print("zpad error")
+            utils.log("zpad error")
 
     def download(self, p):
         global count
@@ -363,8 +374,8 @@ class KissDownloader(threading.Thread):
         if file_list:
             if(int(max(file_list))):
                 if(len(file_list) < int(max(file_list)) and p[5] == 0):
-                    print("Downloaded episode " + str(max(file_list)) + ", filecount " + str(len(file_list)))
-                    print("Recheck from 0")
+                    utils.log("Downloaded episode " + str(max(file_list)) + ", filecount " + str(len(file_list)))
+                    utils.log("Recheck from 0")
                     epcount=p[5]
                 else:
                     epcount=int(max(file_list)) + 1
@@ -386,7 +397,7 @@ class KissDownloader(threading.Thread):
             while l:
                 l=self.login(p[0], p[1], p[8])
                 if not l:
-                    print("Login failed... try again")
+                    utils.log("Login failed... try again")
                 else:
                     l = False
         k=True
@@ -398,17 +409,17 @@ class KissDownloader(threading.Thread):
                 k=False
             except:
                 time.sleep(2)
-                print("Error loading page")
+                utils.log("Error loading page")
 
         if (int(ecount) < (int(p[4]) + 1)):
-            print("Retrieve from " + str(epcount) + " of " + str(p[4]))
+            utils.log("Retrieve from " + str(epcount) + " of " + str(p[4]))
 
             for e in self.frange(float(epcount), int(maxretrieve), 0.5):
                 if(int(ecount) < int(download_threads) * 3 and int(ecount) < int(maxretrieve)):
                     time.sleep(2)
                     page=self.get_episode_page(e, p[8])
                     if page[0] == "":
-                        print('Reading page episodes...')
+                        utils.log('Reading page episodes...')
                         pass
                     else:
                         video=self.get_video_src(page[0], p[10])
@@ -432,7 +443,7 @@ class KissDownloader(threading.Thread):
                                 if(number5 == 4 and "-" in varxx[-5:]):
                                     e=str(varxx[-5:]).zfill(2)
                             except:
-                                print("Error: hyphen")
+                                utils.log("Error: hyphen")
 
                             if page[1]: # uncensored
                                 filename=prefix2 + p[2] + "_-_" + str(e) + "_" + video[2] + "_BD" + KA + video[1]
@@ -440,16 +451,16 @@ class KissDownloader(threading.Thread):
                                 filename=prefix2 + p[2] + "_-_" + str(e) + "_" + video[2] + KA + video[1]
                             episode_list.append((video[0], filename, p[7], e))
                             ecount=ecount + 1
-                            print("Resolved [" + str(filename) + "]")
+                            utils.log("Resolved [" + str(filename) + "]")
 
                             queue.put(video[0]) # append video url to queue
                         else:
-                            print("Retrieve failed [" + str(e) + "]")
+                            utils.log("Retrieve failed [" + str(e) + "]")
                 else:
-                    print("Queue limit reached (" + str(int(download_threads) * 3) + ")")
+                    utils.log("Queue limit reached (" + str(int(download_threads) * 3) + ")")
                     break
             else:
-                print("Retrieved episode limit (" + str(int(maxretrieve) - 1) + ")")
+                utils.log("Retrieved episode limit (" + str(int(maxretrieve) - 1) + ")")
 
         self.driver.close()
 
@@ -468,10 +479,11 @@ class KissDownloader(threading.Thread):
                     if(int(last_count) > 9000):
                         last_count=count
                     else:
-                        print("> " + str(count) + " remain")
+                        utils.log("> " + str(count) + " remain")
                         last_count=count
         except KeyboardInterrupt:
-            sys.exit("keyboard interrupt") # TODO proper thread exit logic
+            utils.log("keyboard interrupt") # TODO proper thread exit logic
+            sys.exit()
 
         if(episode_list):
             try:
@@ -481,14 +493,14 @@ class KissDownloader(threading.Thread):
             os.rename(dir_path + "/temp/resolved" + randnum + ".csv", dir_path + "/resolved.csv.trash")
             KissDownloader.init()
         else:
-            print("Download finished!")
+            utils.log("Download finished!")
             finaldestination=p[7]
-            print(finaldestination)
+            utils.log(finaldestination)
             if(complete_dir): # move *.mp4 to complete_dir
                 file_count=[]
                 for infile in glob.glob(p[7] + "/*.mp4"):
                     file_count.append(infile)
-                print(str(len(file_count)) + "/" + str(p[4]))
+                utils.log(str(len(file_count)) + "/" + str(p[4]))
                 if(len(file_count) >= int(p[4])-1):
                     for files in os.listdir(finaldestination):
                         if files.endswith('.mp4'):
@@ -497,14 +509,14 @@ class KissDownloader(threading.Thread):
                         os.rmdir(finaldestination + "/temp")
                         os.rmdir(finaldestination)
                     except:
-                        print("Folder delete failed")
+                        utils.log("Folder delete failed")
                 else:
                     if(len(file_count) <= 1):
-                        print("Download failed!")
+                        utils.log("Download failed!")
                         os.rmdir(finaldestination + "/temp")
                         os.rmdir(finaldestination)
                     else:
-                        print("Invalid filecount!")
+                        utils.log("Invalid filecount!")
 
             os.remove(dir_path + "/resolved.csv")
             os.rename(dir_path + "/temp/resolved" + randnum + ".csv", dir_path + "/resolved.csv")
@@ -520,7 +532,8 @@ class KissDownloader(threading.Thread):
 
         resolved = Path(dir_path + "/resolved.csv")
         if not resolved.is_file():
-            sys.exit('Error: no series queued to download!')
+            utils.log('Error: no series queued to download!')
+            sys.exit()
 
         reader=csv.reader(open(dir_path + "/resolved.csv", "r"), delimiter=",")
         newfile=open(dir_path + "/temp/resolved" + randnum + ".csv", "a")
@@ -530,41 +543,57 @@ class KissDownloader(threading.Thread):
             try:
                 if row:
                     if(br == 0):
-                        title=row[0]
-                        url=row[1]
-                        episode_count=row[2]
-                        mal=row[3]
-                        if(row[4]):
-                            episode_min=int(row[4])+1
-                            print("Minimum episode set to",episode_min-1)
+                        if row[0]:
+                            title=row[0]
                         else:
-                            episode_min=row[4]
-                        episode_max=row[5]
+                            utils.log("Error reading title")
+                            sys.exit()
+                        if row[1]:
+                            url=row[1]
+                        else:
+                            utils.log("Error reading url")
+                            sys.exit()
+                        if row[2]:
+                            episode_count=row[2]
+                        else:
+                            utils.log("Error reading episode_count")
+                            sys.exit()
+                        mal=row[3]
+                        if(int(row[4]) > 0):
+                            episode_min=int(row[4])+1
+                            utils.log("Minimum episode set to " + str(int(episode_min)-1))
+                        else:
+                            episode_min=int(0)
                         if(int(row[5])):
-                            print("Maximum episode set to " + str(row[5]))
+                            episode_max=row[5]
+                            utils.log("Maximum episode set to " + str(episode_max))
+                        else:
+                            episode_max=int(0)
                         if(int(row[6]) >= 0 and int(row[6]) <= 1080):
                             if(int(row[6]) >= 360):
-                                print("Resolution limited to " + str(row[6]) + "p")
+                                utils.log("Resolution limited to " + str(row[6]) + "p")
                             resolution=row[6]
                         else:
-                            sys.exit("Column 6 resolution out of bounds ['360','480','720','1080']")
-                        br=1
-                        newrow=[row[0], row[1], row[2], row[3], row[4], row[5], row[6], 1]
-                        pass
+                            resolution=0
+                        break
                     else:
                         writer.writerows([row])
-            except IndexError:
-                print("EndIndex")
-            except Exception:
-                print("Exception")
+            except IndexError as e:
+                utils.log(e)
+                utils.log("IndexError")
+            except Exception as e:
+                utils.log(e)
+                utils.log("Exception reading resolved.csv")
         # writer.writerows([newrow])
 
         newfile.close()
         try:
             if not title:
-                sys.exit("Complete!")
+                utils.log("Complete!")
+                sys.exit()
         except:
-            sys.exit("Complete!")
+            utils.log("Complete!")
+            sys.exit()
         try:
             for k, v in {'&&': '', '&': '_and_', "'s": 's'}.items(): # replace
                 title=title.replace(k, v)
@@ -572,8 +601,9 @@ class KissDownloader(threading.Thread):
             title=re.sub('_+', '_', title) # replace multiple _
             title=title.rstrip('_') # remove last underscore
         except:
-            sys.exit("Critical error renaming title")
-        print('Initiate... [' + str(title) + ']')
+            utils.log("Critical error renaming title")
+            sys.exit()
+        utils.log('Initiate... [' + str(title) + ']')
 
         if not destination_folder:
             destination_folder=str(dir_path)
@@ -590,7 +620,12 @@ class KissDownloader(threading.Thread):
         if website.endswith('/'):
             website=website[:-1]
 
-        return website, username, userpassword, title, url, mal, episode_min, episode_count, destination_folder, episode_max, resolution
+        try:
+            return website, username, userpassword, title, url, mal, episode_min, episode_count, destination_folder, episode_max, resolution
+        except UnboundLocalError as e:
+            utils.log(e)
+            utils.log("Critical error reading resolved.csv in " + dir_path)
+            sys.exit()
 
     def run_download(self):
         if self[8] == "":
@@ -610,7 +645,8 @@ class KissDownloader(threading.Thread):
         try: # check network connection
             socket.create_connection(("www.google.com", 80))
         except OSError:
-            sys.exit("Unable to connect to network :(")
+            utils.log("Unable to connect to network :(")
+            sys.exit()
 
         # 0 website, 1 username,2 userpassword, 3 title, 4 url, 5 mal, 6 episode_min, 7 episode_count, 8 destination, 9 episode_max, 10 resolution
         website, username, userpassword, title, url, mal, episode_min, episode_count, destination_folder, episode_max, resolution=KissDownloader.read_config()

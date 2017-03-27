@@ -1,4 +1,0 @@
-youtube-dl
-pySmartDL
-bs4
-selenium
