@@ -54,7 +54,6 @@ if getattr(sys, 'frozen', False):
 elif __file__:
     dir_path = os.path.dirname(__file__)
 
-print(dir_path)
 randnum=str(randint(1, 100000)) # used to create random filename, should be revised
 queue=Queue.Queue()
 count=0
@@ -98,17 +97,22 @@ class KissDownloader(threading.Thread):
                                 download_list[nestlist[0][3]]=console_output # update
                             except KeyError:
                                 download_list[nestlist[0][3]].append(console_output) # initial
+                            except Exception as e:
+                                utils.log(e)
+                                utils.log("=E Download logic error")
                         time.sleep(1)
                         if progress == 100 and obj.get_eta() == 0:
                             time.sleep(1)
                     if obj.isFinished():
                         try:
                             del download_list[nestlist[0][3]] # remove
-                        except:
+                        except Exception as e:
+                            utils.log(e)
                             utils.log("Error: unable to remove episode" + str(nestlist[0][3]))
                         try:
                             shutil.move(nestlist[0][2] + "temp/" + nestlist[0][1], nestlist[0][2] + nestlist[0][1]) # move on download complete
-                        except:
+                        except Exception as e:
+                            utils.log(e)
                             utils.log("Failed moving " + str(nestlist[0][2] + "temp/" + nestlist[0][1]) + " to " + str(nestlist[0][2] + nestlist[0][1]))
                     utils.log("Completed" + str(episode))
                 count=count - 1
@@ -157,10 +161,12 @@ class KissDownloader(threading.Thread):
                 password.send_keys(pw)
                 password.send_keys(Keys.RETURN)
                 time.sleep(2)
-            except:
+            except Exception as e:
+                utils.log(e)
                 utils.log("Error: login page not loaded (critical)")
                 return False
-        except:
+        except Exception as e:
+            utils.log(e)
             utils.log("Error: login failed")
             time.sleep(4)
             return False
@@ -194,6 +200,9 @@ class KissDownloader(threading.Thread):
             return None
         except ValueError as e:
             return None
+        except Exception as e:
+            utils.log(e)
+            sys.exit()
         return None
 
     def get_episode_page(self, episode, site): # parse video url, get episode page from list
@@ -249,6 +258,9 @@ class KissDownloader(threading.Thread):
                             pass
                     except ValueError:
                         pass
+                    except Exception as e:
+                        utils.log(e)
+                        sys.exit()
         return ["", False]
 
     def get_video_src(self, episode_page, resolution): # parse url, return video url
@@ -266,9 +278,10 @@ class KissDownloader(threading.Thread):
                     episode=episode - 1
                 else:
                     x=False
-            except:
+            except Exception as e:
+                utils.log(e)
                 utils.log("Timeout [" + str(episode_page) + "] Retrying...")
-                time.sleep(random.randint(5, 10))
+                time.sleep(5)
         # print(page.url)
         currentpage=self.driver.page_source
         soup=BeautifulSoup(currentpage, 'html.parser')
@@ -277,7 +290,8 @@ class KissDownloader(threading.Thread):
 
         try:
             resolution=int(resolution)
-        except:
+        except Exception as e:
+            utils.log(e)
             utils.log("Resolution error " + str(resolution))
             sys.exit()
 
@@ -305,17 +319,7 @@ class KissDownloader(threading.Thread):
                     return [link.get('href'), ".mp4", resolutionr + "p"]
 
         for link in soup.find_all('a', string="CLICK HERE TO DOWNLOAD"): # openload (experimental)
-            ydl=youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
-            with ydl:
-                try:
-                    result=ydl.extract_info(link.get('href'), download=False) # extract info
-                    if "entries" in result:
-                        video=result['entries'][0] # playlist video
-                    else:
-                        video=result # single video
-                    return [video['url'], "." + video['ext'], "720p"]
-                except ValueError as e:
-                    utils.log('Openload logic error')
+            utils.log("openload not supported yet")
 
         return ["false", "", ""]
 
@@ -325,14 +329,16 @@ class KissDownloader(threading.Thread):
             while i < stop:
                 yield i
                 i += step
-        except:
+        except Exception as e:
+            utils.log(e)
             utils.log("frange error")
 
     def zpad(self, val, n):
         try:
             bits=val.split('.')
             return "%s.%s" % (bits[0].zfill(n), bits[1])
-        except:
+        except Exception as e:
+            utils.log(e)
             utils.log("zpad error")
 
     def download(self, p):
@@ -387,7 +393,11 @@ class KissDownloader(threading.Thread):
 
         if(int(ecount) < maxretrieve):
             extension=webdriver.ChromeOptions()
-            extension.add_extension(dir_path + "/extension/ublock_origin.crx")
+            try:
+                extension.add_extension(dir_path + "/extension/ublock_origin.crx")
+            except OSError as e:
+                utils.log(e)
+                utils.log("Error loading extension")
             extension.add_argument('--dns-prefetch-disable')
             #prefs = {"profile.managed_default_content_settings.images":2}
             #extension.add_experimental_option("prefs",prefs)
@@ -407,7 +417,8 @@ class KissDownloader(threading.Thread):
                 time.sleep(3)
                 self.rootPage=self.driver.page_source
                 k=False
-            except:
+            except Exception as e:
+                utils.log(e)
                 time.sleep(2)
                 utils.log("Error loading page")
 
@@ -442,7 +453,8 @@ class KissDownloader(threading.Thread):
                                 number5=sum(c.isdigit() for c in varxx[-5:])
                                 if(number5 == 4 and "-" in varxx[-5:]):
                                     e=str(varxx[-5:]).zfill(2)
-                            except:
+                            except Exception as e:
+                                utils.log(e)
                                 utils.log("Error: hyphen")
 
                             if page[1]: # uncensored
@@ -484,6 +496,8 @@ class KissDownloader(threading.Thread):
         except KeyboardInterrupt:
             utils.log("keyboard interrupt") # TODO proper thread exit logic
             sys.exit()
+        except Exception as e:
+            utils.log(e)
 
         if(episode_list):
             try:
@@ -508,7 +522,8 @@ class KissDownloader(threading.Thread):
                     try:
                         os.rmdir(finaldestination + "/temp")
                         os.rmdir(finaldestination)
-                    except:
+                    except Exception as e:
+                        utils.log(e)
                         utils.log("Folder delete failed")
                 else:
                     if(len(file_count) <= 1):
@@ -600,7 +615,8 @@ class KissDownloader(threading.Thread):
             title=re.sub(r'[^a-zA-Z0-9\[\]]', '_', title) # alphanumeric only
             title=re.sub('_+', '_', title) # replace multiple _
             title=title.rstrip('_') # remove last underscore
-        except:
+        except Exception as e:
+            utils.log(e)
             utils.log("Critical error renaming title")
             sys.exit()
         utils.log('Initiate... [' + str(title) + ']')
@@ -625,6 +641,9 @@ class KissDownloader(threading.Thread):
         except UnboundLocalError as e:
             utils.log(e)
             utils.log("Critical error reading resolved.csv in " + dir_path)
+            sys.exit()
+        except Exception as e:
+            utils.log(e)
             sys.exit()
 
     def run_download(self):

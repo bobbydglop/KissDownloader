@@ -12,8 +12,9 @@ class utils():
             with open('kissdownloader.log', 'a') as f:
                 current_time = strftime("%Y-%m-%d %H:%M:%S UTC", gmtime())
                 f.write("%s\t%s\n" % (current_time, message))
-        except Exception:
-            print("=E Could not write to the log file")
+        except Exception as e:
+            utils.log(e)
+            utils.log("=E Could not write to the log file")
 
     def get_config_path():
         if sys.platform == 'linux':
